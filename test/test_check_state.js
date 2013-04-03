@@ -17,4 +17,30 @@ describe('get vds id states',function(){
                        return done()
                    })
        });
+    it('should get _attachments in place of year attachment for state'
+      ,function(done){
+           checker({'db':'vdsdata%2ftracking'
+                   ,'doc':801230
+                   ,'year':'_attachments'
+                   ,'state':'801230_2008_001.png'}
+                  ,function(err,state){
+                       should.not.exist(err)
+                       should.exist(state)
+                       state.should.have.property('digest','md5-vaA0Xy7cpmyz1/1eWzZI+Q==')
+                       return done()
+                   })
+       });
+    it('should not get a missing attachment state'
+      ,function(done){
+           checker({'db':'vdsdata%2ftracking'
+                   ,'doc':801230
+                   ,'year':'_attachments'
+                   ,'state':'801230_2008_raw_004.png'}
+                  ,function(err,state){
+                       should.not.exist(err)
+                       should.not.exist(state)
+                       return done()
+
+                   })
+       });
 })

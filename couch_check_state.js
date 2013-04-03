@@ -2,7 +2,7 @@ var superagent = require('superagent')
 var server = process.env.COUCHDB_HOST || 'localhost'
 var port = process.env.COUCHDB_PORT || 5984
 var couchdb = 'http://'+server+':'+port
-console.log(couchdb)
+//console.log(couchdb)
 /**
  * couchdb_check_state(opts,cb)
  * opts = {'db': the couchdb holding the document,
@@ -55,7 +55,7 @@ function couchdb_check_state(opts,cb){
     var state = opts.state
 
     var query = couchdb+'/'+db+'/'+id
-    console.log(query)
+    //console.log(query)
     superagent
     .get(query)
     .set('accept','application/json')

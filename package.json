@@ -1,22 +1,25 @@
 {
-  "name": "couch_check_state",
+  "name": "couch_set_state",
   "version": "0.0.1",
   "description": "Utilities to help use couchdb as a state storage db",
-  "main": "couch_check_state.js",
+  "main": "couch_set_state.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "should": "~1.2.2",
-    "superagent": "~0.12.0"
+    "superagent": ""
   },
-  "devDependencies": {},
+  "devDependencies": {
+      "should": "",
+      "lodash":"",
+      "couch_check_state":"git://github.com/jmarca/couch_check_state.git"
+  },
   "scripts": {
     "test": "mocha"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jmarca/couch_check_state"
+    "url": "https://github.com/jmarca/couch_set_state"
   },
   "keywords": [
     "couchdb",

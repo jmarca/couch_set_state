@@ -1,10 +1,10 @@
-# Couch Check State
+# Couch Set State
 
-This is a small package that uses superagent to access "state" stored
+This is a small package that uses superagent to set  "state" stored
 in CouchDB.  What I often do is to use a CouchDB database as a way to
 store state across machines.  For example, I might stash that a
 detector is being processed, or that a detector has completed a step
-in its processing.  
+in its processing.
 
 The basic idea is that a document holds all of the information for a
 particular detector, but that the detector might have multiple years
@@ -79,27 +79,28 @@ might look like:
    ... 
 ```
 
-In such a case, one might want to know the state of
-`vdsraw_chain_lengths` for 2008, say to test whether any are greater
-than 5, or for 2009, so see if that process has even been run.  
+In such a case, one might want to set the state of
+`vdsraw_chain_lengths` for 2010, say to show that it is being worked
+on by some process.
 
-This library helps with that.  To get 2010's `vdsraw_chain_length`
+This library helps with that.  To set 2010's `vdsraw_chain_length`
 entry, you would do something like this:
 
 
 ``` javascript
 
-var checker = require('couch_check_state')
-checker({'db':'vdsdata%2ftracking'
+var seter = require('couch_set_state')
+var value = {'some':['arbitrary','data']}
+seter({'db':'vdsdata%2ftracking'
          ,'doc':detector_id
          ,'year':yr
-         ,'state':'vdsraw_chain_lengths'}
+         ,'state':'vdsraw_chain_lengths'
+         ,'value':value}
          ,function(err,state){
+             // make sure state was set properly
              if(err) throw new Error(err)
-             if(state.length<5){
-                 do_raw_imputations(vdsid)
-             }
-             return null;
+             // do something
+             return null
          })
 
 ```

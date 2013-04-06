@@ -16,11 +16,67 @@ var cport = env.COUCHDB_PORT || 5984;
 
 var test_db ='test%2fbulk%2fdeleter'
 var couch = 'http://'+chost+':'+cport+'/'+test_db
+var date = new Date()
+var inprocess_string = date.toISOString()+' inprocess'
 
 var docs = {'docs':[{'_id':'doc1'
                     ,foo:'bar'}
                    ,{'_id':'doc2'
-                    ,'baz':'bat'}]}
+                    ,'baz':'bat'}
+
+                   ,{"_id": "801245",
+                     "2006": {
+                     },
+                     "2007": {
+                         "vdsimputed": "todo",
+                         "wim_neigbors_ready": {
+                             "wim_id": 77,
+                             "distance": 14788,
+                             "direction": "east"
+                         },
+                         "wim_neigbors": {
+                             "wim_id": 77,
+                             "distance": 14788,
+                             "direction": "east"
+                         },
+                         "truckimputed": "2013-04-06T04:45:11.832Z finish",
+                         "paired_wim": null,
+                         "vdsdata": "0",
+                         "rawdata": "1",
+                         "row": 1,
+                         "vdsraw_chain_lengths": [2,2,2,2,2],
+                         "vdsraw_max_iterations": 0,
+                         "occupancy_averaged": 1,
+                         "truckimputation_chain_lengths": [
+                             145,
+                             147,
+                             144,
+                             139,
+                             143
+                         ],
+                         "truckimputation_max_iterations": 0
+                     },
+                     "2008": {
+                         "vdsimputed": "todo",
+                         "wim_neigbors_ready": {
+                             "wim_id": 77,
+                             "distance": 14788,
+                             "direction": "east"
+                         },
+                         "wim_neigbors": {
+                             "wim_id": 77,
+                             "distance": 14788,
+                             "direction": "east"
+                         },
+                         "vdsdata": "0",
+                         "rawdata": "1",
+                         "row": 1,
+                         "truckimputed": "2012-05-21 inprocess",
+                         "vdsraw_chain_lengths": [2,2,2,2,2],
+                         "vdsraw_max_iterations": 0
+                     }}
+
+                   ]}
 
 describe('set vds id states',function(){
     var created_locally=false
@@ -78,6 +134,28 @@ describe('set vds id states',function(){
     })
 
     it('should set chain lengths state for doc1, 2007'
+      ,function(done){
+           setter({'db':test_db
+                  ,'doc':'801245'
+                  ,'year':2008
+                  ,'state':'truckimputed'
+                  ,'value':inprocess_string
+                  }
+                 ,function(err,state){
+                      should.not.exist(err)
+                      getter({'db':test_db
+                             ,'doc':'801245'
+                             ,'year':2008
+                             ,'state':'truckimputed'
+                             }
+                            ,function(err,state){
+                                 should.not.exist(err)
+                                 state.should.eql(inprocess_string)
+                                 return done()
+                             })
+                  })
+       });
+    it('should set inprocess string'
       ,function(done){
            setter({'db':test_db
                   ,'doc':'doc1'

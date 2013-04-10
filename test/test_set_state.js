@@ -176,17 +176,45 @@ describe('set vds id states',function(){
                              })
                   })
        });
-    it('should not set but die gracefully if missing value for state'
-      )// ,function(done){
-       //     setter({'db':'vdsdata%2ftracking'
-       //             ,'doc':801230
-       //             ,'year':'_attachments'
-       //             ,'state':'801230_2008_raw_004.png'}
-       //            ,function(err,state){
-       //                 should.not.exist(err)
-       //                 should.not.exist(state)
-       //                 return done()
+    it('should remove entirely if variable is defined but null'
+      ,function(done){
+           // now you see it
+           setter({'db':test_db
+                  ,'doc':'doc1'
+                  ,'year':2008
+                  ,'state':'vdsraw_chain_lengths'
+                  ,'value':[1111,23,19,22,15]}
+                 ,function(err,state){
+                      should.not.exist(err)
+                      getter({'db':test_db
+                             ,'doc':'doc1'
+                             ,'year':2008
+                             ,'state':'vdsraw_chain_lengths'}
+                            ,function(err,state){
+                                 should.not.exist(err)
+                                 state.should.have.property('length',5)
+                                 state.should.eql([1111,23,19,22,15])
+                                 // now you don't
+                                 setter({'db':test_db
+                                        ,'doc':'doc1'
+                                        ,'year':2008
+                                        ,'state':'vdsraw_chain_lengths'
+                                        ,'value':null}
+                                       ,function(err,state){
+                                            should.not.exist(err)
+                                            getter({'db':test_db
+                                                   ,'doc':'doc1'
+                                                   ,'year':2008
+                                                   ,'state':'vdsraw_chain_lengths'}
+                                                  ,function(err,state){
+                                                       should.not.exist(err)
+                                                       should.not.exist(state)
+                                                       return done()
+                                                   })
+                                        })
 
-       //             })
-       // });
+                             })
+                  })
+
+       });
 })

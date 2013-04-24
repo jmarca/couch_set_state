@@ -65,10 +65,14 @@ function couchdb_set_state(opts,cb){
         if(err) return cb(err)
         var doc = res.body
         // modify doc to contain new state value
-        if(doc[year] === undefined){
-            doc[year]={}
+        if(year){
+            if(doc[year] === undefined){
+                doc[year]={}
+            }
+            doc[year][state]=value
+        }else{
+            doc[state]=value
         }
-        doc[year][state]=value
         // save it
         superagent
         .put(query)
@@ -77,7 +81,7 @@ function couchdb_set_state(opts,cb){
         .end(function(err,putres){
             if(err) return cb(err)
             if(putres.error){
-                console.log(res.text)
+                console.log(putres.text)
                 return cb('error saving state')
             }
             return cb()

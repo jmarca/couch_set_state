@@ -14,9 +14,10 @@ var cpass = env.COUCHDB_PASS ;
 var chost = env.COUCHDB_HOST || 'localhost';
 var cport = env.COUCHDB_PORT || 5984;
 
-var test_db ='test%2fbulk%2fdeleter'
-var couch = 'http://'+chost+':'+cport+'/'+test_db
 var date = new Date()
+var test_db ='test%2fbulk%2fdeleter_'+date.getSeconds()
+var couch = 'http://'+chost+':'+cport+'/'+test_db
+date = new Date()
 var inprocess_string = date.toISOString()+' inprocess'
 
 var docs = {'docs':[{'_id':'doc1'
@@ -79,7 +80,7 @@ var docs = {'docs':[{'_id':'doc1'
                    ]}
 
 describe('set vds id states',function(){
-    var created_locally=false
+    //var created_locally=false
     before(function(done){
         // create a test db, the put data into it
         var opts = {'uri':couch
@@ -92,10 +93,11 @@ describe('set vds id states',function(){
         .auth(cuser,cpass)
         .end(function(e,r){
             should.exist(r)
-            console.log(couch)
-            console.log(r.error)
-            if( r.error === undefined )
-                created_locally=true
+            //console.log(couch)
+            //console.log(r.error)
+            //if( r.error === undefined ){
+                //created_locally=true
+            // }
             // now populate that db with some docs
             superagent.post(couch+'/_bulk_docs')
             .type('json')
@@ -115,7 +117,7 @@ describe('set vds id states',function(){
         })
     })
     after(function(done){
-        if(!created_locally) return done()
+        //if(!created_locally) return done()
 
         var couch = 'http://'+chost+':'+cport+'/'+test_db
         // bail in development
@@ -178,6 +180,7 @@ describe('set vds id states',function(){
                              })
                   })
        });
+
     it('should remove entirely if variable is defined but null'
       ,function(done){
            // now you see it
@@ -219,4 +222,35 @@ describe('set vds id states',function(){
                   })
 
        });
+    it('should create a clean, new document if needed'
+      ,function(done){
+   getter({'db':test_db
+          ,'doc':'count_docula'
+          ,'year':2007
+          ,'state':'look_at_the_birdie'}
+         ,function(err,state){
+              should.not.exist(err)
+              should.not.exist(state)
+              // now set that value
+              setter({'db':test_db
+                     ,'doc':'count_docula'
+                     ,'year':2007
+                     ,'state':'look_at_the_birdie'
+                     ,'value':'poof'}
+                    ,function(err){
+                         should.not.exist(err)
+                         getter({'db':test_db
+                                ,'doc':'count_docula'
+                                ,'year':2007
+                                ,'state':'look_at_the_birdie'}
+                               ,function(err,state){
+                                    should.not.exist(err)
+                                    should.exist(state)
+                                    state.should.eql('poof')
+                                    return done()
+                                })
+                     })
+
+          })
+       })
 })

@@ -64,10 +64,12 @@ function couchdb_set_state(opts,cb){
     .set('followRedirect',true)
     .end(function(err,res){
         if(err) return cb(err)
-        if(res.err){
-            return cb(res.err)
-        }
         var doc = res.body
+        if(res.body.error && res.body.error=='not_found'
+          && res.body.reason && res.body.reason=='missing'){
+            //need to make a new doc
+            doc = {}
+        }
         // modify doc to contain new state value
         if(year){
             if(doc[year] === undefined){

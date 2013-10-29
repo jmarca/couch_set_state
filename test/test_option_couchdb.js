@@ -22,9 +22,10 @@ var _ = require('lodash')
 var superagent = require('superagent')
 
 
-var test_db ='test%2fbulk%2fdeleter2'
-var couch = 'http://'+chost+':'+cport+'/'+test_db
 var date = new Date()
+var test_db ='test%2fbulk%2fdeleter_'+date.getMinutes()+date.getSeconds()
+var couch = 'http://'+chost+':'+cport+'/'+test_db
+date = new Date()
 var inprocess_string = date.toISOString()+' inprocess'
 
 var docs = {'docs':[{'_id':'doc1'
@@ -87,7 +88,6 @@ var docs = {'docs':[{'_id':'doc1'
                    ]}
 
 describe('set vds id states',function(){
-    var created_locally=false
     before(function(done){
         // create a test db, the put data into it
         var opts = {'uri':couch
@@ -99,8 +99,6 @@ describe('set vds id states',function(){
         .type('json')
         .end(function(e,r){
             should.exist(r)
-            if( !r.error )
-                created_locally=true
             // now populate that db with some docs
             superagent.post(couch+'/_bulk_docs')
             .type('json')
@@ -120,8 +118,6 @@ describe('set vds id states',function(){
         })
     })
     after(function(done){
-        if(!created_locally) return done()
-
         var couch = 'http://'+chost+':'+cport+'/'+test_db
         // bail in development
         //console.log(couch)
@@ -173,7 +169,9 @@ describe('set vds id states',function(){
                       getter({'db':test_db
                              ,'doc':'doc1'
                              ,'year':2008
-                             ,'state':'vdsraw_chain_lengths'}
+                             ,'state':'vdsraw_chain_lengths'
+                             ,'couchdb':chost
+                             ,'port':cport}
                             ,function(err,state){
                                  should.not.exist(err)
                                  state.should.have.property('length',5)

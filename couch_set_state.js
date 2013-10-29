@@ -54,15 +54,19 @@ function couchdb_set_state(opts,cb){
     var year = opts.year
     var state = opts.state
     var value = opts.value
-
-    var query = couchdb+'/'+db+'/'+id
-    //console.log(query)
+    var cdb = opts.couchdb || server
+    var cport = opts.port || port
+    cdb = 'http://'+server+':'+cport
+    var query = cdb+'/'+db+'/'+id
     superagent
     .get(query)
     .set('accept','application/json')
     .set('followRedirect',true)
     .end(function(err,res){
         if(err) return cb(err)
+        if(res.err){
+            return cb(res.err)
+        }
         var doc = res.body
         // modify doc to contain new state value
         if(year){

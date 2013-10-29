@@ -1,5 +1,18 @@
 /* global require console process describe it */
 
+var env = process.env;
+var cuser = env.COUCHDB_USER ;
+var cpass = env.COUCHDB_PASS ;
+var chost = env.COUCHDB_HOST || 'localhost';
+var cport = env.COUCHDB_PORT || 5984;
+
+// reset env vars so that the default use of environment variables fails
+process.env.COUCHDB_HOST=''
+process.env.COUCHDB_PORT='1234'
+process.env.COUCHDB_USER=''
+process.env.COUCHDB_PASS=''
+
+
 var should = require('should')
 var setter = require('../couch_set_state')
 
@@ -8,13 +21,8 @@ var getter = require('couch_check_state')
 var _ = require('lodash')
 var superagent = require('superagent')
 
-var env = process.env;
-var cuser = env.COUCHDB_USER ;
-var cpass = env.COUCHDB_PASS ;
-var chost = env.COUCHDB_HOST || 'localhost';
-var cport = env.COUCHDB_PORT || 5984;
 
-var test_db ='test%2fbulk%2fdeleter'
+var test_db ='test%2fbulk%2fdeleter2'
 var couch = 'http://'+chost+':'+cport+'/'+test_db
 var date = new Date()
 var inprocess_string = date.toISOString()+' inprocess'
@@ -86,15 +94,12 @@ describe('set vds id states',function(){
                    ,'method': "PUT"
                    ,'headers': {}
                    };
-        opts.headers.authorization = 'Basic ' + new Buffer(cuser + ':' + cpass).toString('base64')
-        opts.headers['Content-Type'] =  'application/json'
         superagent.put(couch)
         .auth(cuser,cpass)
+        .type('json')
         .end(function(e,r){
             should.exist(r)
-            console.log(couch)
-            console.log(r.error)
-            if( r.error === undefined )
+            if( !r.error )
                 created_locally=true
             // now populate that db with some docs
             superagent.post(couch+'/_bulk_docs')
@@ -129,41 +134,40 @@ describe('set vds id states',function(){
         .type('json')
         .auth(cuser,cpass)
         .end(function(e,r){
-            if(e) return done(e)
-            return done()
+            return done(e)
         })
         return null
     })
 
-    it('should set chain lengths state for doc1, 2007'
+    it('should screw up as I reset env vars to empty'
       ,function(done){
-           setter({'db':test_db
-                  ,'doc':'801245'
-                  ,'year':2008
-                  ,'state':'truckimputed'
-                  ,'value':inprocess_string
-                  }
-                 ,function(err,state){
-                      should.not.exist(err)
-                      getter({'db':test_db
-                             ,'doc':'801245'
-                             ,'year':2008
-                             ,'state':'truckimputed'
-                             }
-                            ,function(err,state){
-                                 should.not.exist(err)
-                                 state.should.eql(inprocess_string)
-                                 return done()
-                             })
-                  })
-       });
-    it('should set inprocess string'
+           try{
+               setter({'db':test_db
+                      ,'doc':'801245'
+                      ,'year':2008
+                      ,'state':'truckimputed'
+                      ,'value':inprocess_string
+                      }
+                     ,function(err,state){
+                          should.exist(err)
+                          if(err) return done()
+                          return done('failed to fail')
+                      })
+
+           }catch(err){
+               return done()
+           }
+           return null
+       })
+    it('should obey couchdb and port parameters'
       ,function(done){
            setter({'db':test_db
                   ,'doc':'doc1'
                   ,'year':2008
                   ,'state':'vdsraw_chain_lengths'
-                  ,'value':[11,23,19,22,15]}
+                  ,'value':[11,23,19,22,15]
+                  ,'couchdb':chost
+                  ,'port':cport}
                  ,function(err,state){
                       should.not.exist(err)
                       getter({'db':test_db
@@ -177,46 +181,5 @@ describe('set vds id states',function(){
                                  return done()
                              })
                   })
-       });
-    it('should remove entirely if variable is defined but null'
-      ,function(done){
-           // now you see it
-           setter({'db':test_db
-                  ,'doc':'doc1'
-                  ,'year':2008
-                  ,'state':'vdsraw_chain_lengths'
-                  ,'value':[1111,23,19,22,15]}
-                 ,function(err,state){
-                      should.not.exist(err)
-                      getter({'db':test_db
-                             ,'doc':'doc1'
-                             ,'year':2008
-                             ,'state':'vdsraw_chain_lengths'}
-                            ,function(err,state){
-                                 should.not.exist(err)
-                                 state.should.have.property('length',5)
-                                 state.should.eql([1111,23,19,22,15])
-                                 // now you don't
-                                 setter({'db':test_db
-                                        ,'doc':'doc1'
-                                        ,'year':2008
-                                        ,'state':'vdsraw_chain_lengths'
-                                        ,'value':null}
-                                       ,function(err,state){
-                                            should.not.exist(err)
-                                            getter({'db':test_db
-                                                   ,'doc':'doc1'
-                                                   ,'year':2008
-                                                   ,'state':'vdsraw_chain_lengths'}
-                                                  ,function(err,state){
-                                                       should.not.exist(err)
-                                                       should.not.exist(state)
-                                                       return done()
-                                                   })
-                                        })
-
-                             })
-                  })
-
        });
 })

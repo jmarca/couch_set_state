@@ -56,7 +56,10 @@ function couchdb_set_state(opts,cb){
     var value = opts.value
     var cdb = opts.couchdb || server
     var cport = opts.port || port
-    cdb = 'http://'+cdb+':'+cport
+    cdb = cdb+':'+cport
+    if(! /http/.test(cdb)){
+        cdb = 'http://'+cdb
+    }
     var query = cdb+'/'+db+'/'+id
     //console.log(query)
     superagent

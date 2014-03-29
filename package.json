@@ -7,12 +7,14 @@
     "test": "test"
   },
   "dependencies": {
-    "superagent": ""
+    "superagent": "",
+    "lodash": "^2.4.1",
+    "config_okay": "0.0.2"
   },
   "devDependencies": {
-      "should": "",
-      "lodash":"",
-      "couch_check_state":"git://github.com/jmarca/couch_check_state.git"
+    "should": "",
+    "lodash": "",
+    "couch_check_state": "git://github.com/jmarca/couch_check_state.git"
   },
   "scripts": {
     "test": "mocha"

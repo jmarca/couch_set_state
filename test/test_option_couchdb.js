@@ -1,32 +1,23 @@
 /* global require console process describe it */
 
-var env = process.env;
-var cuser = env.COUCHDB_USER ;
-var cpass = env.COUCHDB_PASS ;
-var chost = env.COUCHDB_HOST || 'localhost';
-var cport = env.COUCHDB_PORT || 5984;
-
-// reset env vars so that the default use of environment variables fails
-process.env.COUCHDB_HOST=''
-process.env.COUCHDB_PORT='1234'
-process.env.COUCHDB_USER=''
-process.env.COUCHDB_PASS=''
-
-
 var should = require('should')
 var setter = require('../couch_set_state')
 
 var getter = require('couch_check_state')
 
+var path    = require('path')
+var rootdir = path.normalize(__dirname)
+var config_file = rootdir+'/../test.config.json'
+
+var config_okay = require('config_okay')
+var config={}
+
 var _ = require('lodash')
 var superagent = require('superagent')
 
 
-var date = new Date()
-var test_db ='test%2fbulk%2fdeleter_'+date.getMinutes()+date.getSeconds()
-var couch = 'http://'+chost+':'+cport+'/'+test_db
-date = new Date()
-var inprocess_string = date.toISOString()+' inprocess'
+
+var inprocess_string = (new Date()).toISOString()+' inprocess'
 
 var docs = {'docs':[{'_id':'doc1'
                     ,foo:'bar'}
@@ -86,60 +77,67 @@ var docs = {'docs':[{'_id':'doc1'
                      }}
 
                    ]}
+function create_tempdb(cb){
+    var date = new Date()
+    var test_db_unique = [config.couchdb.db,
+                          date.getHours(),
+                          date.getMinutes(),
+                          date.getSeconds(),
+                          date.getMilliseconds()].join('-')
+    config.couchdb.db = test_db_unique
+    var cdb =
+        [config.couchdb.url+':'+config.couchdb.port
+        ,config.couchdb.db].join('/')
+
+    superagent.put(cdb)
+    .type('json')
+    .auth(config.couchdb.auth.username
+         ,config.couchdb.auth.password)
+    .end(function(err,result){
+        if(result.error){
+            // do not delete if we didn't create
+            config.delete_db=false
+        }else{
+            config.delete_db=true
+        }
+        cb()
+    })
+    return null
+}
 
 describe('set vds id states',function(){
     before(function(done){
-        // create a test db, the put data into it
-        var opts = {'uri':couch
-                   ,'method': "PUT"
-                   ,'headers': {}
-                   };
-        superagent.put(couch)
-        .auth(cuser,cpass)
-        .type('json')
-        .end(function(e,r){
-            should.exist(r)
-            // now populate that db with some docs
-            superagent.post(couch+'/_bulk_docs')
-            .type('json')
-            .send(docs)
-            .end(function(e,r){
-                if(e) done(e)
-                docs=[]
-                _.each(r.body
-                      ,function(resp){
-                           resp.should.have.property('ok')
-                           docs.push({doc:{_id:resp.id
-                                          ,_rev:resp.rev}})
-                       });
-                return done()
-            })
+        config_okay(config_file,function(err,c){
+            if(!c.couchdb.db){ throw new Error('need valid db defined in test.config.json')}
+            config = c
+            create_tempdb(done)
             return null
-        })
-    })
-    after(function(done){
-        var couch = 'http://'+chost+':'+cport+'/'+test_db
-        // bail in development
-        //console.log(couch)
-        //return done()
-        var opts = {'uri':couch
-                   ,'method': "DELETE"
-                   ,'headers': {}
-                   };
-        superagent.del(couch)
-        .type('json')
-        .auth(cuser,cpass)
-        .end(function(e,r){
-            return done(e)
         })
         return null
     })
+    after(function(done){
+        var cdb =
+            config.couchdb.url+':'+config.couchdb.port
+                 + '/'+ config.couchdb.db
+        if(config.delete_db){
+            superagent.del(cdb)
+            .type('json')
+            .auth(config.couchdb.auth.username
+                 ,config.couchdb.auth.password)
+            .end(function(e,r){
+                return done()
+            })
+            return null
+        }else{
+            console.log("not deleting what I didn't create:" + cdb)
+            return done()
+        }
+    })
 
-    it('should screw up as I reset env vars to empty'
+    it('should not work right env vars to empty'
       ,function(done){
            try{
-               setter({'db':test_db
-                      ,'doc':'801245'
+               setter({'doc':'801245'
                       ,'year':2008
                       ,'state':'truckimputed'
                       ,'value':inprocess_string
@@ -157,21 +155,44 @@ describe('set vds id states',function(){
        })
     it('should obey couchdb and port parameters'
       ,function(done){
-           setter({'db':test_db
+           setter({'db':config.couchdb.db
                   ,'doc':'doc1'
                   ,'year':2008
                   ,'state':'vdsraw_chain_lengths'
                   ,'value':[11,23,19,22,15]
-                  ,'couchdb':chost
-                  ,'port':cport}
+                  ,'url':config.couchdb.url
+                  ,'port':config.couchdb.port}
                  ,function(err,state){
                       should.not.exist(err)
-                      getter({'db':test_db
+                      getter({'db':config.couchdb.db
                              ,'doc':'doc1'
                              ,'year':2008
                              ,'state':'vdsraw_chain_lengths'
-                             ,'couchdb':chost
-                             ,'port':cport}
+                             ,'couchdb':config.couchdb.url
+                             ,'port':config.couchdb.port}
+                            ,function(err,state){
+                                 should.not.exist(err)
+                                 state.should.have.property('length',5)
+                                 state.should.eql([11,23,19,22,15])
+                                 return done()
+                             })
+                  })
+       });
+    it('should use config file'
+      ,function(done){
+           setter({'doc':'doc1'
+                  ,'year':2008
+                  ,'state':'vdsraw_chain_lengths'
+                  ,'value':[11,23,19,22,15]
+                  ,config_file:config_file}
+                 ,function(err,state){
+                      should.not.exist(err)
+                      getter({'db':config.couchdb.db
+                             ,'doc':'doc1'
+                             ,'year':2008
+                             ,'state':'vdsraw_chain_lengths'
+                             ,'couchdb':config.couchdb.url
+                             ,'port':config.couchdb.port}
                             ,function(err,state){
                                  should.not.exist(err)
                                  state.should.have.property('length',5)

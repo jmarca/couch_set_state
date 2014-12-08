@@ -8,8 +8,8 @@
   },
   "dependencies": {
     "superagent": "",
-    "lodash": "^2.4.1",
-    "config_okay": "0.0.2"
+    "lodash": "",
+    "config_okay": ""
   },
   "devDependencies": {
     "should": "",

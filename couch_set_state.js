@@ -51,7 +51,7 @@ var _ = require('lodash')
 
 // wrap call to config_okay, if needed
 function couchdb_set_state(opts,cb){
-    if(config.couchdb.url === undefined && opts.config_file !== undefined){
+    if(config.couchdb.host === undefined && opts.config_file !== undefined){
         return config_okay(opts.config_file,function(e,c){
             config.couchdb = c.couchdb
             return _couchdb_set_state(opts,cb)
@@ -72,11 +72,9 @@ function _couchdb_set_state(opts,cb){
     var state = c.state
     var value = c.value
     if(opts.couchdb !== undefined){
-        console.log('hey, you are using an old way of doing this')
-        c.url = opts.couchdb
+        throw new Error('hey, you are using an old way of doing this')
     }
-
-    var cdb = c.url || '127.0.0.1'
+    var cdb = c.host || '127.0.0.1'
     var cport = c.port || 5984
     cdb = cdb+':'+cport
     if(! /http/.test(cdb)){
@@ -84,7 +82,6 @@ function _couchdb_set_state(opts,cb){
     }
 
     var query = cdb+'/'+db+'/'+id
-    // console.log(query)
     superagent
     .get(query)
     .set('accept','application/json')

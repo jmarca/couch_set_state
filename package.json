@@ -1,15 +1,15 @@
 {
   "name": "couch_set_state",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Utilities to help use couchdb as a state storage db",
   "main": "couch_set_state.js",
   "directories": {
     "test": "test"
   },
   "dependencies": {
-    "config_okay": "0.0.3",
+    "config_okay": "",
     "lodash": "",
-    "queue-async": "^1.0.7",
+    "queue-async": "",
     "superagent": ""
   },
   "devDependencies": {

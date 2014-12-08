@@ -7,9 +7,10 @@
     "test": "test"
   },
   "dependencies": {
-    "superagent": "",
+    "config_okay": "0.0.3",
     "lodash": "",
-    "config_okay": ""
+    "queue-async": "^1.0.7",
+    "superagent": ""
   },
   "devDependencies": {
     "should": "",

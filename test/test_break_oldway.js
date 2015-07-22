@@ -134,71 +134,32 @@ describe('set vds id states',function(){
         }
     })
 
-    it('should not work right env vars to empty'
-      ,function(done){
-           try{
-               setter({'doc':'801245'
-                      ,'year':2008
-                      ,'state':'truckimputed'
-                      ,'value':inprocess_string
-                      }
-                     ,function(err,state){
-                          should.exist(err)
-                          if(err) return done()
-                          return done('failed to fail')
+    it('should obey couchdb and port parameters'
+       ,function(done){
+
+               setter({'db':config.couchdb.db
+                       ,'doc':'doc1'
+                       ,'year':2008
+                       ,'state':'vdsraw_chain_lengths'
+                       ,'value':[11,23,19,22,15]
+                       ,'host':config.couchdb.host
+                       ,'port':config.couchdb.port}
+
+                      ,function(err,state){
+                          should.not.exist(err)
+                          getter({'db':config.couchdb.db
+                                  ,'doc':'doc1'
+                                  ,'year':2008
+                                  ,'state':'vdsraw_chain_lengths'
+                                  ,'host':config.couchdb.host
+                                  ,'port':config.couchdb.port}
+                            ,function(err,state){
+                                should.not.exist(err)
+                                 state.should.have.property('length',5)
+                                 state.should.eql([11,23,19,22,15])
+                                 return done()
+                            })
                       })
 
-           }catch(err){
-               return done()
-           }
-           return null
        })
-    // it('should obey couchdb and port parameters'
-    //   ,function(done){
-    //        setter({'db':config.couchdb.db
-    //               ,'doc':'doc1'
-    //               ,'year':2008
-    //               ,'state':'vdsraw_chain_lengths'
-    //               ,'value':[11,23,19,22,15]
-    //                ,'host':config.couchdb.host
-    //               ,'port':config.couchdb.port}
-    //              ,function(err,state){
-    //                   should.not.exist(err)
-    //                   getter({'db':config.couchdb.db
-    //                          ,'doc':'doc1'
-    //                          ,'year':2008
-    //                          ,'state':'vdsraw_chain_lengths'
-    //                          ,'couchdb':config.couchdb.host
-    //                          ,'port':config.couchdb.port}
-    //                         ,function(err,state){
-    //                              should.not.exist(err)
-    //                              state.should.have.property('length',5)
-    //                              state.should.eql([11,23,19,22,15])
-    //                              return done()
-    //                          })
-    //               })
-    //    });
-    // it('should use config file'
-    //   ,function(done){
-    //        setter({'doc':'doc1'
-    //               ,'year':2008
-    //               ,'state':'vdsraw_chain_lengths'
-    //               ,'value':[11,23,19,22,15]
-    //               ,config_file:config_file}
-    //              ,function(err,state){
-    //                   should.not.exist(err)
-    //                   getter({'db':config.couchdb.db
-    //                          ,'doc':'doc1'
-    //                          ,'year':2008
-    //                          ,'state':'vdsraw_chain_lengths'
-    //                          ,'couchdb':config.couchdb.host
-    //                          ,'port':config.couchdb.port}
-    //                         ,function(err,state){
-    //                              should.not.exist(err)
-    //                              state.should.have.property('length',5)
-    //                              state.should.eql([11,23,19,22,15])
-    //                              return done()
-    //                          })
-    //               })
-    //    });
 })

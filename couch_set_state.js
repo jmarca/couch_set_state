@@ -83,11 +83,23 @@ function _couchdb_set_state(opts,cb){
 
     var query = cdb+'/'+db+'/'+id
     superagent
-    .get(query)
-    .set('accept','application/json')
-    .set('followRedirect',true)
-    .end(function(err,res){
-        if(err) return cb(err)
+        .get(query)
+        .set('accept','application/json')
+        .set('followRedirect',true)
+        .end(function(err,res){
+
+            if(err){
+                // might be okay
+                if(res.body.error && res.body.error=='not_found'
+                   && res.body.reason && res.body.reason=='missing'){
+                    //need to make a new doc
+                    doc = {}
+                }else{
+                    console.log('got a error')
+                    console.log(res.body)
+                    return cb(err)
+                }
+            }
         var doc = res.body
         if(res.body.error && res.body.error=='not_found'
           && res.body.reason && res.body.reason=='missing'){

@@ -1,91 +1,30 @@
 /* global require console process describe it */
 
-var should = require('should')
-var setter = require('../couch_set_state')
+const tap = require('tap')
 
-var getter = require('couch_check_state')
+const setter = require('../couch_set_state')
+const getter = require('couch_check_state')
 
-var path    = require('path')
-var rootdir = path.normalize(__dirname)
-var config_file = rootdir+'/../test.config.json'
+const path    = require('path')
+const rootdir = path.normalize(__dirname)
+const config_file = rootdir+'/../test.config.json'
 
-var config_okay = require('config_okay')
-var config={}
+const config_okay = require('config_okay')
+const config={}
 
-var _ = require('lodash')
-var superagent = require('superagent')
+const superagent = require('superagent')
 
+const inprocess_string = (new Date()).toISOString()+' inprocess'
 
-
-var inprocess_string = (new Date()).toISOString()+' inprocess'
-
-var docs = {'docs':[{'_id':'doc1'
-                    ,foo:'bar'}
-                   ,{'_id':'doc2'
-                    ,'baz':'bat'}
-
-                   ,{"_id": "801245",
-                     "2006": {
-                     },
-                     "2007": {
-                         "vdsimputed": "todo",
-                         "wim_neigbors_ready": {
-                             "wim_id": 77,
-                             "distance": 14788,
-                             "direction": "east"
-                         },
-                         "wim_neigbors": {
-                             "wim_id": 77,
-                             "distance": 14788,
-                             "direction": "east"
-                         },
-                         "truckimputed": "2013-04-06T04:45:11.832Z finish",
-                         "paired_wim": null,
-                         "vdsdata": "0",
-                         "rawdata": "1",
-                         "row": 1,
-                         "vdsraw_chain_lengths": [2,2,2,2,2],
-                         "vdsraw_max_iterations": 0,
-                         "occupancy_averaged": 1,
-                         "truckimputation_chain_lengths": [
-                             145,
-                             147,
-                             144,
-                             139,
-                             143
-                         ],
-                         "truckimputation_max_iterations": 0
-                     },
-                     "2008": {
-                         "vdsimputed": "todo",
-                         "wim_neigbors_ready": {
-                             "wim_id": 77,
-                             "distance": 14788,
-                             "direction": "east"
-                         },
-                         "wim_neigbors": {
-                             "wim_id": 77,
-                             "distance": 14788,
-                             "direction": "east"
-                         },
-                         "vdsdata": "0",
-                         "rawdata": "1",
-                         "row": 1,
-                         "truckimputed": "2012-05-21 inprocess",
-                         "vdsraw_chain_lengths": [2,2,2,2,2],
-                         "vdsraw_max_iterations": 0
-                     }}
-
-                   ]}
-function create_tempdb(cb){
-    var date = new Date()
-    var test_db_unique = [config.couchdb.db,
+function create_tempdb(config,cb){
+    const date = new Date()
+    const test_db_unique = [config.couchdb.db,
                           date.getHours(),
                           date.getMinutes(),
                           date.getSeconds(),
                           date.getMilliseconds()].join('-')
     config.couchdb.db = test_db_unique
-    var cdb =
+    const cdb =
         [config.couchdb.host+':'+config.couchdb.port
         ,config.couchdb.db].join('/')
 
@@ -93,66 +32,44 @@ function create_tempdb(cb){
     .type('json')
     .auth(config.couchdb.auth.username
          ,config.couchdb.auth.password)
-    .end(function(err,result){
-        if(result.error){
-            // do not delete if we didn't create
-            config.delete_db=false
-        }else{
-            config.delete_db=true
-        }
-        cb()
-    })
+        .end(function(err,result){
+            cb()
+        })
     return null
 }
 
-describe('set vds id states',function(){
-    before(function(done){
-        config_okay(config_file,function(err,c){
-            if(!c.couchdb.db){ throw new Error('need valid db defined in test.config.json')}
-            config = c
-            create_tempdb(done)
-            return null
-        })
-        return null
-    })
-    after(function(done){
-        var cdb =
-            config.couchdb.host+':'+config.couchdb.port
-                 + '/'+ config.couchdb.db
-        if(config.delete_db){
-            superagent.del(cdb)
-            .type('json')
-            .auth(config.couchdb.auth.username
-                 ,config.couchdb.auth.password)
-            .end(function(e,r){
-                return done()
-            })
-            return null
-        }else{
-            console.log("not deleting what I didn't create:" + cdb)
-            return done()
-        }
-    })
+function testing (t){
+    t.plan(1)
 
-    it('should not work right env vars to empty'
-      ,function(done){
-           try{
-               setter({'doc':'801245'
-                      ,'year':2008
-                      ,'state':'truckimputed'
-                      ,'value':inprocess_string
-                      }
-                     ,function(err,state){
-                          should.exist(err)
-                          if(err) return done()
-                          return done('failed to fail')
-                      })
+    return t.test(
+        'should not work right env vars to empty'
+        ,function(tt){
+            tt.plan(3)
+            try{
+                setter({'doc':'801245'
+                        ,'year':2008
+                        ,'state':'truckimputed'
+                        ,'value':inprocess_string
+                       }
+                       ,function(err,state){
+                           tt.ok(err,'should fail without params')
+                           tt.notOk(state)
+                           tt.same(err,{ 'error': 'not_found'
+                                         , 'reason': 'no_db_file'}
+                                   ,'expected error object')
+                           tt.end()
+                       })
 
-           }catch(err){
-               return done()
-           }
+            }catch(err){
+                console.log('caught error',err)
+                return tt.end()
+            }
            return null
-       })
+        })
+        .catch(function(e){
+            throw e
+        })
+}
     // it('should obey couchdb and port parameters'
     //   ,function(done){
     //        setter({'db':config.couchdb.db
@@ -201,4 +118,43 @@ describe('set vds id states',function(){
     //                          })
     //               })
     //    });
-})
+
+function teardown(config,done){
+    const cdb =
+          config.couchdb.host+':'+config.couchdb.port
+          + '/'+ config.couchdb.db
+    superagent.del(cdb)
+        .type('json')
+        .auth(config.couchdb.auth.username
+              ,config.couchdb.auth.password)
+        .end(function(e,r){
+            return done()
+        })
+    return null
+}
+
+
+config_okay(config_file)
+    .then(function(c){
+        if(!c.couchdb.db){ throw new Error('need valid db defined in test.config.json')}
+        config.couchdb = c.couchdb
+        create_tempdb(config,function(e,r){
+            if(e)  throw e
+            return tap.test('test setting state',testing)
+                .then(function(tt){
+                    teardown(config,function(eeee,rrrr){
+                        tap.end()
+                        return null
+                    })
+                    return null
+                })
+                .catch(function(e){
+                    throw(e)
+                })
+        })
+
+        return null
+    })
+    .catch(function(e){
+        throw e
+    })

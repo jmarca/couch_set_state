@@ -96,9 +96,9 @@ function _couchdb_set_state(opts,cb){
                     //need to make a new doc
                     doc = {}
                 }else{
-                    console.log('got a error')
-                    console.log(res.body)
-                    return cb(err)
+                    // console.log('got a error')
+                    // console.log(res.body)
+                    return cb(res.body)
                 }
             }
         var doc = res.body

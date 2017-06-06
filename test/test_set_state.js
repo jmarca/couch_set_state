@@ -123,7 +123,6 @@ function create_tempdb(config,cb){
 
 
 function testing (t){
-    console.log(config_file)
     t.plan(4)
     return t.test(
         'should set chain lengths state for doc1, 2007'

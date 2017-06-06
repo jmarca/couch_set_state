@@ -52,10 +52,11 @@ var _ = require('lodash')
 // wrap call to config_okay, if needed
 function couchdb_set_state(opts,cb){
     if(config.couchdb.host === undefined && opts.config_file !== undefined){
-        return config_okay(opts.config_file,function(e,c){
-            config.couchdb = c.couchdb
-            return _couchdb_set_state(opts,cb)
-        })
+        return config_okay(opts.config_file)
+            .then(function(c){
+                config.couchdb = c.couchdb
+                return _couchdb_set_state(opts,cb)
+            })
     }
 
     // otherwise, hopefully everything is defined in the opts file!

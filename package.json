@@ -7,18 +7,16 @@
     "test": "test"
   },
   "dependencies": {
-    "config_okay": "",
-    "lodash": "",
-    "queue-async": "",
+    "config_okay": "^1.0.0",
     "superagent": ""
   },
   "devDependencies": {
-    "should": "",
-    "lodash": "",
-    "couch_check_state": "git://github.com/jmarca/couch_check_state.git"
+    "couch_check_state": "git://github.com/jmarca/couch_check_state.git",
+    "tap": "^10.3.3"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "tap test/**/*.js --cov",
+    "posttest": "tap --coverage-report=lcov"
   },
   "repository": {
     "type": "git",

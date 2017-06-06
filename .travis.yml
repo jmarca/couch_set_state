@@ -13,6 +13,12 @@ addons:
   code_climate:
     repo_token: d7647668fe8eb1da34633b937e6e168652d7d1ad1d727601981eea12bf4edb1d
 
+services:
+  - couchdb
+
+before_script:
+  - echo '{"couchdb": {"host": "127.0.0.1","port":5984,"db":"a_teststatedb"}' > test.config.json
+
 notifications:
   email:
     on_success: change

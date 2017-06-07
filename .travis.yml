@@ -17,7 +17,7 @@ services:
   - couchdb
 
 before_script:
-  - echo '{"couchdb": {"host": "127.0.0.1","port":5984,"db":"a_teststatedb"}' > test.config.json
+  - echo "{\"couchdb\":{\"host\":\"127.0.0.1\",\"port\":5984,\"db\":\"a_teststatedb\"}" > test.config.json
 
 notifications:
   email:

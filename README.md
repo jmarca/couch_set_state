@@ -1,6 +1,9 @@
 # Couch Set State
 
 [![Greenkeeper badge](https://badges.greenkeeper.io/jmarca/couch_set_state.svg)](https://greenkeeper.io/)
+[![Build Status](https://travis-ci.org/jmarca/couch_set_state.svg?branch=master)](https://travis-ci.org/jmarca/couch_set_state)
+[![Code Climate](https://codeclimate.com/github/jmarca/couch_set_state/badges/gpa.svg)](https://codeclimate.com/github/jmarca/couch_set_state)
+[![Test Coverage](https://codeclimate.com/github/jmarca/couch_set_state/badges/coverage.svg)](https://codeclimate.com/github/jmarca/couch_set_state/coverage)
 
 This is a small package that uses superagent to set  "state" stored
 in CouchDB.  What I often do is to use a CouchDB database as a way to
@@ -78,7 +81,7 @@ might look like:
        "truckimputed": "2012-01-31b finished",
        "vdsraw_max_iterations": 0
    },
-   ... 
+   ...
 ```
 
 In such a case, one might want to set the state of

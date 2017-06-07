@@ -17,6 +17,7 @@ services:
   - couchdb
 
 before_script:
+  - curl -s -X PUT http://localhost:5984/_config/admins/bilbo -d '"baggins"'
   - echo "{\"couchdb\":{\"host\":\"127.0.0.1\",\"port\":5984,\"db\":\"a_teststatedb\",\"auth\":{\"username\":\"bilbo\",\"password\":\"baggins\"}}}" > test.config.json && chmod 0600 test.config.json
 
 notifications:

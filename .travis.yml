@@ -17,7 +17,7 @@ services:
   - couchdb
 
 before_script:
-  - echo "{\"couchdb\":{\"host\":\"127.0.0.1\",\"port\":5984,\"db\":\"a_teststatedb\"}}" > test.config.json && chmod 0600 test.config.json
+  - echo "{\"couchdb\":{\"host\":\"127.0.0.1\",\"port\":5984,\"db\":\"a_teststatedb\",\"auth\":{\"username\":\"bilbo\",\"password\":\"baggins\"}}}" > test.config.json && chmod 0600 test.config.json
 
 notifications:
   email:

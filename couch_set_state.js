@@ -65,6 +65,9 @@ function couchdb_set_state(opts,cb){
 
 
 function _couchdb_set_state(opts,cb){
+    if(opts.couchdb !== undefined){
+        throw new Error('hey, you are using an old way of doing this')
+    }
     const c = Object.assign({},config.couchdb,opts)
     const db = c.db
     const id = c.doc
@@ -87,9 +90,6 @@ function _couchdb_set_state(opts,cb){
             .send(doc)
     }
 
-    if(opts.couchdb !== undefined){
-        throw new Error('hey, you are using an old way of doing this')
-    }
     let cdb = c.host || '127.0.0.1'
     const cport = c.port || 5984
     cdb = cdb+':'+cport

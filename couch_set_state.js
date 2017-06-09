@@ -95,8 +95,8 @@ function _couchdb_set_state(opts,cb){
         .then( res=> {
             // console.log('back from query with res')
             let doc = {}
-            if(res.body.error && res.body.error=='not_found'
-               && res.body.reason && res.body.reason=='missing'){
+            if(res.body.error && res.body.error==='not_found'
+               && res.body.reason && res.body.reason==='missing'){
                 // need to make a new doc
                 // doc = {}
             }else{

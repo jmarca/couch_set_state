@@ -63,7 +63,7 @@ function couchdb_set_state(opts,cb){
     return _couchdb_set_state(opts,cb)
 }
 
-
+/*eslint complexity: ["error", 8]*/
 function _couchdb_set_state(opts,cb){
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')

@@ -16,27 +16,7 @@ const superagent = require('superagent')
 
 const inprocess_string = (new Date()).toISOString()+' inprocess'
 
-function create_tempdb(config,cb){
-    const date = new Date()
-    const test_db_unique = [config.couchdb.db,
-                          date.getHours(),
-                          date.getMinutes(),
-                          date.getSeconds(),
-                          date.getMilliseconds()].join('-')
-    config.couchdb.db = test_db_unique
-    const cdb =
-        [config.couchdb.host+':'+config.couchdb.port
-        ,config.couchdb.db].join('/')
-
-    superagent.put(cdb)
-    .type('json')
-    .auth(config.couchdb.auth.username
-         ,config.couchdb.auth.password)
-        .end(function(err,result){
-            cb()
-        })
-    return null
-}
+const utils = require('./utils.js')
 
 
 function testing (t){
@@ -76,41 +56,20 @@ function testing (t){
         })
 }
 
-function teardown(config,done){
-    const cdb =
-          config.couchdb.host+':'+config.couchdb.port
-          + '/'+ config.couchdb.db
-    superagent.del(cdb)
-        .type('json')
-        .auth(config.couchdb.auth.username
-              ,config.couchdb.auth.password)
-        .end(function(e,r){
-            return done()
-        })
-    return null
-}
 
 
 config_okay(config_file)
     .then(function(c){
         if(!c.couchdb.db){ throw new Error('need valid db defined in test.config.json')}
         config.couchdb = c.couchdb
-        create_tempdb(config,function(e,r){
-            if(e)  throw e
-            return tap.test('test setting state',testing)
-                .then(function(tt){
-                    teardown(config,function(eeee,rrrr){
-                        tap.end()
-                        return null
-                    })
-                    return null
-                })
-                .catch(function(e){
-                    throw(e)
-                })
-        })
-
-        return null
+        return utils.create_tempdb(config)
+    })
+    .then( function (){
+        return tap.test('test setting state',testing)
+    })
+    .then(function(){
+        tap.end()
+        return utils.teardown(config)
     })
     .catch(function(e){
         throw e

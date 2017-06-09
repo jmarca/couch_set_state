@@ -1,7 +1,7 @@
 var superagent = require('superagent')
 var config={'couchdb':{}}
 var config_okay = require('config_okay')
-var _ = require('lodash')
+
 
 /**
  * couchdb_set_state(opts,cb)
@@ -65,71 +65,96 @@ function couchdb_set_state(opts,cb){
 
 
 function _couchdb_set_state(opts,cb){
-    var c = {}
-    _.assign(c,config.couchdb,opts)
-    var db = c.db
-    var id = c.doc
-    var year = c.year
-    var state = c.state
-    var value = c.value
+    const c = Object.assign({},config.couchdb,opts)
+    const db = c.db
+    const id = c.doc
+    const year = c.year
+    const state = c.state
+    const value = c.value
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')
     }
-    var cdb = c.host || '127.0.0.1'
-    var cport = c.port || 5984
+    let cdb = c.host || '127.0.0.1'
+    const cport = c.port || 5984
     cdb = cdb+':'+cport
     if(! /http/.test(cdb)){
         cdb = 'http://'+cdb
     }
-
-    var query = cdb+'/'+db+'/'+id
-    superagent
+    if(db === undefined ){
+        return cb('db is required in options object under \'db\' key')
+    }
+    if(id === undefined ){
+        return cb('document id is required in options object under \'doc\' key')
+    }
+    const query = cdb+'/'+db+'/'+id
+    // console.log(query)
+    return superagent
         .get(query)
         .set('accept','application/json')
         .set('followRedirect',true)
-        .end(function(err,res){
-
-            if(err){
-                // might be okay
-                if(res.body.error && res.body.error=='not_found'
-                   && res.body.reason && res.body.reason=='missing'){
-                    //need to make a new doc
-                    doc = {}
-                }else{
-                    // console.log('got a error')
-                    // console.log(res.body)
-                    return cb(res.body)
+        .then( res=> {
+            // console.log('back from query with res')
+            let doc = {}
+            if(res.body.error && res.body.error=='not_found'
+               && res.body.reason && res.body.reason=='missing'){
+                // need to make a new doc
+                // doc = {}
+            }else{
+                doc = res.body
+            }
+            // modify doc to contain new state value
+            if(year){
+                if(doc[year] === undefined){
+                    doc[year]={}
                 }
+                doc[year][state]=value
+            }else{
+                doc[state]=value
             }
-        var doc = res.body
-        if(res.body.error && res.body.error=='not_found'
-          && res.body.reason && res.body.reason=='missing'){
-            //need to make a new doc
-            doc = {}
-        }
-        // modify doc to contain new state value
-        if(year){
-            if(doc[year] === undefined){
-                doc[year]={}
+            // save it
+            return superagent
+                .put(query)
+                .type('json')
+                .send(doc)
+        },err =>{
+            // console.log(err.response.body)
+            if(err.status !== undefined &&
+               err.status === 404 &&
+               err.response.body !== undefined &&
+               err.response.body.reason === 'missing'
+              ){ // not found, but just missing
+                    let doc  = {}
+                // modify doc to contain new state value
+                if(year){
+                    if(doc[year] === undefined){
+                        doc[year]={}
+                    }
+                    doc[year][state]=value
+                }else{
+                    doc[state]=value
+                }
+                // save it
+                return superagent
+                    .put(query)
+                    .type('json')
+                    .send(doc)
+            }else{
+                // not good, so bail out
+                // console.log('in error else case, not 404 missing')
+                throw err.response.body
             }
-            doc[year][state]=value
-        }else{
-            doc[state]=value
-        }
-        // save it
-        superagent
-        .put(query)
-        .type('json')
-        .send(doc)
-        .end(function(err,putres){
-            if(err) return cb(err)
-            if(putres.error){
-                console.log(putres.text)
-                return cb('error saving state')
-            }
-            return cb()
         })
-        return null
-    })
+        .then( res =>{
+            if(res.error){
+                // console.log(res.text)
+                throw new Error('error saving state')
+            }
+            return cb(null,res)
+        })
+        .catch( err => {
+            // console.log('in the final catch in set state')
+            return cb(err)
+        })
 }
+
 module.exports=couchdb_set_state

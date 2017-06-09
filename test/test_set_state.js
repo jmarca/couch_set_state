@@ -13,16 +13,18 @@ const config_okay = require('config_okay')
 const config_file = rootdir+'/../test.config.json'
 const config={}
 
+const utils = require('./utils.js')
+
 tap.plan(1)
 
 
 const date = new Date()
 const inprocess_string = date.toISOString()+' inprocess'
 
-let cdb
 const docs = []
 
-function populate_db(config,cb){
+function populate_db(config){
+
 
     const mydocs = {'docs':[{'_id':'doc1'
                              ,foo:'bar'}
@@ -82,43 +84,14 @@ function populate_db(config,cb){
                               }}
 
                            ]}
-
-    superagent.post(cdb+'/_bulk_docs')
-        .type('json')
-        .send(mydocs)
-        .end(function(e,r){
-            if(e) {
-                throw new Error(e)
-            }
-            // console.log(r.body)
-            //r.body.should.have.property('ok')
-            docs.push ({doc:{ '_id':r.body.id
-                              ,'_rev':r.body.rev}})
-            return cb()
-        })
-    return null
-}
-
-function create_tempdb(config,cb){
-    const date = new Date()
-    const test_db_unique = [date.getHours(),
-                          date.getMinutes(),
-                          date.getSeconds(),
-                          date.getMilliseconds()].join('-')
-    config.couchdb.db += test_db_unique
-    cdb ='http://'+
+    const cdb =
         [config.couchdb.host+':'+config.couchdb.port
         ,config.couchdb.db].join('/')
-    superagent
-        .put(cdb)
-        .auth(config.couchdb.auth.username,
-              config.couchdb.auth.password
-             )
-        .end(function(e,r){
-            //should.not.exist(e)
-            return cb()
-        })
-    return null
+
+    return superagent.post(cdb+'/_bulk_docs')
+        .type('json')
+        .send(mydocs)
+
 }
 
 
@@ -252,47 +225,26 @@ function testing (t){
       })
 }
 
-function teardown(config,done){
-    var opts = {'uri':cdb
-                ,'method': "DELETE"
-                ,'headers': {}
-               };
-    superagent.del(cdb)
-        .type('json')
-        .auth(config.couchdb.auth.username,
-              config.couchdb.auth.password
-             )
-        .end(function(e,r){
-            if(e) return done(e)
-            return done()
-        })
-    return null
-}
-
 config_okay(config_file)
     .then(function(c){
+        if(!c.couchdb.db){ throw new Error('need valid db defined in test.config.json')}
         config.couchdb = c.couchdb
-        create_tempdb(config,function(e,r){
-            if(e)  throw e
-            populate_db(config,function(ee,rr){
-                if(e) throw ee
-                return tap.test('test setting state',testing)
-                    .then(function(tt){
-                        teardown(config,function(eeee,rrrr){
-                            tap.end()
-                            return null
-                        })
-                        return null
-                    })
-                    .catch(function(e){
-                        console.log('caught error',e)
-                        throw(e)
-                    })
-            })
-            return null
-        })
-        return null
+        return utils.create_tempdb(config)
     })
-    .catch( function(e){
+    .then(()=>{
+        return populate_db(config)
+    })
+    .then( r => {
+        docs.push ({doc:{ '_id':r.body.id
+                          ,'_rev':r.body.rev}})
+    })
+    .then( function (){
+        return tap.test('test setting state',testing)
+    })
+    .then(function(){
+        tap.end()
+        return utils.teardown(config)
+    })
+    .catch(function(e){
         throw e
     })

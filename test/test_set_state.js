@@ -90,7 +90,7 @@ function populate_db(config,cb){
             if(e) {
                 throw new Error(e)
             }
-            console.log(r.body)
+            // console.log(r.body)
             //r.body.should.have.property('ok')
             docs.push ({doc:{ '_id':r.body.id
                               ,'_rev':r.body.rev}})

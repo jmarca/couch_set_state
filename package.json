@@ -15,7 +15,7 @@
     "tap": "^10.3.3"
   },
   "scripts": {
-    "test": "tap test/**/*.js --cov",
+    "test": "tap test/**/test*.js --cov",
     "posttest": "tap --coverage-report=lcov"
   },
   "repository": {

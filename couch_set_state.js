@@ -71,6 +71,22 @@ function _couchdb_set_state(opts,cb){
     const year = c.year
     const state = c.state
     const value = c.value
+    function modify_doc(doc){
+        // modify doc to contain new state value
+        if(year){
+            if(doc[year] === undefined){
+                doc[year]={}
+            }
+            doc[year][state]=value
+        }else{
+            doc[state]=value
+        }
+        return superagent
+            .put(query)
+            .type('json')
+            .send(doc)
+    }
+
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')
     }
@@ -103,19 +119,8 @@ function _couchdb_set_state(opts,cb){
                 doc = res.body
             }
             // modify doc to contain new state value
-            if(year){
-                if(doc[year] === undefined){
-                    doc[year]={}
-                }
-                doc[year][state]=value
-            }else{
-                doc[state]=value
-            }
+            return modify_doc(doc)
             // save it
-            return superagent
-                .put(query)
-                .type('json')
-                .send(doc)
         },err =>{
             // console.log(err.response.body)
             if(err.status !== undefined &&
@@ -123,21 +128,10 @@ function _couchdb_set_state(opts,cb){
                err.response.body !== undefined &&
                err.response.body.reason === 'missing'
               ){ // not found, but just missing
-                    let doc  = {}
+                let doc  = {}
                 // modify doc to contain new state value
-                if(year){
-                    if(doc[year] === undefined){
-                        doc[year]={}
-                    }
-                    doc[year][state]=value
-                }else{
-                    doc[state]=value
-                }
+                return modify_doc(doc)
                 // save it
-                return superagent
-                    .put(query)
-                    .type('json')
-                    .send(doc)
             }else{
                 // not good, so bail out
                 // console.log('in error else case, not 404 missing')

@@ -104,7 +104,7 @@ function _couchdb_set_state(opts,cb){
     }
     const query = cdb+'/'+db+'/'+id
     // console.log(query)
-    return superagent
+    const req = superagent
         .get(query)
         .set('accept','application/json')
         .set('followRedirect',true)
@@ -138,17 +138,23 @@ function _couchdb_set_state(opts,cb){
                 throw err.response.body
             }
         })
-        .then( res =>{
-            if(res.error){
-                // console.log(res.text)
-                throw new Error('error saving state')
-            }
-            return cb(null,res)
-        })
-        .catch( err => {
-            // console.log('in the final catch in set state')
-            return cb(err)
-        })
+    if(!cb || cb === undefined){
+        return req //return the promise object from superagent
+    }else{
+        req
+            .then( res =>{
+                if(res.error){
+                    // console.log(res.text)
+                    throw new Error('error saving state')
+                }
+                return cb(null,res)
+            })
+            .catch( err => {
+                // console.log('in the final catch in set state')
+                return cb(err)
+            })
+        return null
+    }
 }
 
 module.exports=couchdb_set_state

@@ -96,7 +96,7 @@ function populate_db(config){
 
 
 function testing (t){
-    t.plan(4)
+    t.plan(6)
     return t.test(
         'should set chain lengths state for doc1, 2007'
         ,function(tt){
@@ -194,19 +194,19 @@ function testing (t){
               ,function(tt){
                   var task = Object.assign({}
                                            ,config.couchdb
-                                           ,{'doc':'doc1'
+                                           ,{'doc':'doc5'
                                              ,'year':2008
                                              ,'state':'look_at_the_birdie'})
 
                   getter(task
                          ,function(err,state){
-                             tt.notOk(err,'should not get error from get')
-                             tt.notOk(state,'should.not.exist(state)')
+                             //console.log(err)
+                             tt.ok(err,'should get error from get, doc is not there')
                              // now set that value
                              task.value='poof'
                              setter(task
                                     ,function(err){
-                                        tt.notOk(err,'should.not.exist(err)')
+                                        tt.notOk(err,'should.not.exist(err)---created doc')
                                         delete task.value
                                         getter(task
                                                ,function(err,state){
@@ -222,6 +222,70 @@ function testing (t){
                          })
                   return null
               })
+      }).then(function(t){
+          return t.test(
+              'should not need year to be set'
+              ,function(tt){
+                  var task = Object.assign({}
+                                           ,config.couchdb
+                                           ,{'doc':'docnoyear'
+                                             ,'state':'look_at_the_birdie'})
+
+                  getter(task
+                         ,function(err,state){
+                             tt.ok(err,'should get error from get, doc is not there')
+                             // now set that value
+                             task.value='tweet'
+                             setter(task
+                                    ,function(err){
+                                        tt.notOk(err,'should.not.exist(err)')
+                                        delete task.value
+                                        getter(task
+                                               ,function(err,state){
+                                                   tt.notOk(err,'should.not.exist(err)')
+                                                   tt.ok(state,'should get state now')
+                                                   tt.is(state,'tweet')
+                                                   tt.end()
+                                                   return null
+                                               })
+                                        return null
+                                    })
+                             return null
+                         })
+                  return null
+              })
+      }).then(function(t){
+          return t.test(
+              'do not use callback, expect a promise'
+              ,function(tt){
+                  //tt.plan(3)
+                  var task = Object.assign({}
+                                           ,config.couchdb
+                                           ,{'doc':'docnoyear'
+                                             ,'year':'haveyear'
+                                             ,'state':'look_at_the_birdie'})
+                  // set that value
+                  task.value='tweet'
+                  const set_req =  setter(task)
+                  set_req
+                      .then( ()=>{
+                          // value should be set, now check it
+                          delete task.value
+                          getter(task
+                                 ,function(err,state){
+                                     tt.notOk(err,'should.not.exist(err)')
+                                     tt.ok(state,'should get state now')
+                                     tt.is(state,'tweet')
+                                     tt.end()
+                                     return null
+                                 })
+                          return null
+                      })
+                      .catch( (e)=>{
+                          tt.fail('should not error out')
+                      })
+              })
+
       })
 }
 

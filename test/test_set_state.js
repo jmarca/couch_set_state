@@ -96,7 +96,7 @@ function populate_db(config){
 
 
 function testing (t){
-    t.plan(6)
+    t.plan(7)
     return t.test(
         'should set chain lengths state for doc1, 2007'
         ,function(tt){
@@ -279,6 +279,31 @@ function testing (t){
                                      tt.end()
                                      return null
                                  })
+                          return null
+                      })
+                      .catch( (e)=>{
+                          tt.fail('should not error out')
+                      })
+              })
+
+      }).then(function(t){
+          return t.test(
+              'can change setting without hitting a conflict error in promise case'
+              ,function(tt){
+                  var task = Object.assign({}
+                                           ,config.couchdb
+                                           ,{'doc':'docnoyear'
+                                             ,'year':'haveyear'
+                                             ,'state':'look_at_the_birdie'})
+                  // set that value to something different now
+                  task.value='fly away'
+                  const set_req =  setter(task)
+
+                  set_req
+                      .then( ()=>{
+                          // value should be set, now check it
+                          tt.pass('did not throw')
+                          tt.end()
                           return null
                       })
                       .catch( (e)=>{

@@ -74,6 +74,22 @@ function _couchdb_set_state(opts,cb){
     const year = c.year
     const state = c.state
     const value = c.value
+    let cdb = c.host || '127.0.0.1'
+    const cport = c.port || 5984
+    cdb = cdb+':'+cport
+    if(! /http/.test(cdb)){
+        cdb = 'http://'+cdb
+    }
+    if(db === undefined ){
+        return cb('db is required in options object under \'db\' key')
+    }
+    if(id === undefined ){
+        return cb('document id is required in options object under \'doc\' key')
+    }
+    const query = cdb+'/'+db+'/'+id
+    // console.log(query)
+
+    // make handler to modify and put the doc
     function modify_doc(doc){
         // modify doc to contain new state value
         if(year){
@@ -90,20 +106,7 @@ function _couchdb_set_state(opts,cb){
             .send(doc)
     }
 
-    let cdb = c.host || '127.0.0.1'
-    const cport = c.port || 5984
-    cdb = cdb+':'+cport
-    if(! /http/.test(cdb)){
-        cdb = 'http://'+cdb
-    }
-    if(db === undefined ){
-        return cb('db is required in options object under \'db\' key')
-    }
-    if(id === undefined ){
-        return cb('document id is required in options object under \'doc\' key')
-    }
-    const query = cdb+'/'+db+'/'+id
-    // console.log(query)
+    // now go get the doc (or get nothing if it doesn't exist yet)
     const req = superagent
         .get(query)
         .set('accept','application/json')

@@ -103,6 +103,7 @@ function _couchdb_set_state(opts,cb){
         return superagent
             .put(query)
             .type('json')
+            .set('accept','application/json')
             .send(doc)
     }
 

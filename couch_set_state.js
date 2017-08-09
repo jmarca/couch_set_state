@@ -234,7 +234,7 @@ function make_getter (query){
 
 // need to simplify this code.
 
-/*eslint complexity: ["error", 5]*/
+/*eslint complexity: ["error", 9]*/
 function _couchdb_set_state(opts,cb){
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')

@@ -22,13 +22,15 @@ const date = new Date()
 const inprocess_string = date.toISOString()+' inprocess'
 
 
-const docids = [1,2,3
-               // ,4,5,6
-               // ,7,8,9
+const docids = [1
+                ,2
+                //,3
+                // ,4,5,6
+                // ,7,8,9
                ].map( d => { return 'superspecial_'+d })
 const years = [
     1
-    ,2
+    ,1
     //,3,4,5,6
     //,7,8,9
     //,10,11
@@ -50,26 +52,36 @@ function testing (t){
                         ,config.couchdb)
 
                     // save that away
+                    let passed_job = {}
                     const yearly_job = setter(newtask)
                           .then( results =>{
                               // expect results is okay across all docs
+                              tt.is(results.status,201)
                               tt.ok(results)
                               tt.ok(results.body)
                               tt.ok(results.body.ok)
                               tt.ok(results.body.id)
                               tt.ok(results.body.rev)
+                              if(passed_job[results.body.id] === undefined){
+                                  passed_job[results.body.id] = 1
+                              }else{
+                                  passed_job[results.body.id]++
+                              }
+                              tt.is(passed_job[results.body.id],1) // only one job passes
                               if(!results.body.ok){
-                                  console.log(results.body)
+                                  console.log('results not okay',results.body)
                               }
                               return null
                           })
-                          // .catch(e =>{
-                          //     tt.is(e.status,409)
-                          //     tt.ok(e.response)
-                          //     tt.ok(e.response.body)
-                          //     tt.is(e.response.body.reason,'Document update conflict.')
-                          //     throw e
-                          // })
+                          .catch(e =>{
+                              tt.is(e.status,409)
+                              tt.ok(e.response)
+                              tt.ok(e.response.body)
+                              tt.is(e.response.body.reason,'Document update conflict.')
+                              tt.fail('should not have conflicts')
+                              throw e
+                              return null
+                          })
                     jobs.push(yearly_job)
                     return null
                 })
@@ -85,6 +97,7 @@ function testing (t){
                         tt.ok(e.response)
                         tt.ok(e.response.body)
                         tt.is(e.response.body.reason,'Document update conflict.')
+                        tt.fail('did crashed with a document conflict')
                         tt.end()
                         //console.log('going to throw now')
                         // throw(e)

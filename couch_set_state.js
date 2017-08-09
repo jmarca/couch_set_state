@@ -1,8 +1,8 @@
-var superagent = require('superagent')
-var config={'couchdb':{}}
-var config_okay = require('config_okay')
-
-
+const superagent = require('superagent')
+const config={'couchdb':{}}
+const config_okay = require('config_okay')
+const CONFLICT_ERROR='unresolvable conflict'
+const CONFLICT_STATUS=409
 /**
  * couchdb_set_state(opts,cb)
  * opts = {'db': the couchdb holding the document,
@@ -63,7 +63,150 @@ function couchdb_set_state(opts,cb){
     return _couchdb_set_state(opts,cb)
 }
 
-/*eslint complexity: ["error", 8]*/
+const state_test = (state,old_doc) => {
+}
+
+function get_state(year,state,doc){
+    if(year===undefined){
+        return doc[state]
+    }else{
+        if(doc[year] !== undefined ){
+            return doc[year][state]
+        }else{
+            return doc[year]
+        }
+    }
+}
+
+const year_test = (year,state,old_doc,conflict_err) => {
+    const old_state = get_state(year,state,old_doc)
+    if(old_state === undefined ){
+        console.log('old state is undefined')
+        return (new_doc) => {
+            // this version is empty old doc, so if the new doc has
+            // the same state set as the target, then fail (we started
+            // empty, something else set our state)
+            let new_state = get_state(year,state,new_doc)
+            console.log('new_state is ',new_state)
+            if( new_state === undefined ){
+                console.log('new doc has no state', state)
+                return new_doc
+            }else{
+                throw conflict_err
+            }
+        }
+    }else{
+        console.log('old state is defined as ',old_state)
+        return (new_doc)=>{
+            let new_state = get_state(year,state,new_doc)
+            if( new_state == old_state ){
+                return new_doc
+            }else{
+                throw conflict_err
+            }
+        }
+    }
+
+}
+
+
+
+
+function make_conflict_handler(old_doc,desired_state,conflict_err,getter,modifier,putter){
+    let looplimit = 10
+    let update_safe
+    const year = desired_state.year
+    const state = desired_state.state
+    const value = desired_state.value
+
+    update_safe = year_test(desired_state.year,desired_state.state,old_doc,conflict_err)
+    const conflict_handler = err => {
+        if(looplimit-- < 1) {
+            console.log ('maximum retries hit for conflicts, document id ',old_doc._id)
+            throw err
+        }
+        // compare old doc with the new doc in results
+        // focusing on the key we're trying to update in desired_state
+
+
+        return getter()
+            .then(get_handler)
+            .then( doc =>{
+                doc = update_safe(doc)
+                return modifier(doc)
+                    .then(putter)
+                    .catch( err=> {
+                        if(err.status !== undefined &&
+                           err.status === 409) {
+                            return conflict_handler(err)
+                        }else{
+                            throw err
+                        }
+                    })
+            })
+            .catch( err=> {
+                console.log('after update_safe, caught error')
+                throw err
+            })
+    }
+    return conflict_handler
+}
+
+function get_handler(res){
+    // console.log('back from query with res')
+    let doc = {}
+    if(res.body !== undefined){
+        doc = res.body
+    }
+    console.log('get handler sez',doc)
+    return doc
+}
+
+
+function make_year_modifier (year,state,value){
+    return (doc)=>{
+        if(doc[year] === undefined){
+            doc[year]={}
+        }
+        doc[year][state]=value
+        return doc
+    }
+}
+
+function make_state_modifier (state,value){
+    return (doc)=>{
+        doc[state]=value
+        return doc
+    }
+}
+
+// make handler to modify and put the doc
+function make_modifier(desired_state){
+        // modify doc to contain new state value
+    if(desired_state.year){
+        return make_year_modifier(desired_state.year
+                                  ,desired_state.state
+                                  ,desired_state.value)
+    }else{
+        return make_state_modifier(desired_state.state
+                                  ,desired_state.value)
+    }
+}
+
+function set_old_doc(year,state,doc){
+    let old_doc = {}
+    if(year === undefined){
+        old_doc[state] = doc[state]
+    }else{
+        old_doc[year] = {}
+        if(doc[year] !== undefined &&
+           doc[year][state] !== undefined){
+            old_doc[year][state] = doc[year][state]
+        }
+    }
+    return old_doc
+}
+
 function _couchdb_set_state(opts,cb){
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')
@@ -74,6 +217,7 @@ function _couchdb_set_state(opts,cb){
     const year = c.year
     const state = c.state
     const value = c.value
+
     let cdb = c.host || '127.0.0.1'
     const cport = c.port || 5984
     cdb = cdb+':'+cport
@@ -89,17 +233,7 @@ function _couchdb_set_state(opts,cb){
     const query = cdb+'/'+db+'/'+id
     // console.log(query)
 
-    // make handler to modify and put the doc
-    function modify_doc(doc){
-        // modify doc to contain new state value
-        if(year){
-            if(doc[year] === undefined){
-                doc[year]={}
-            }
-            doc[year][state]=value
-        }else{
-            doc[state]=value
-        }
+    const put_job = (doc) => {
         return superagent
             .put(query)
             .type('json')
@@ -107,25 +241,23 @@ function _couchdb_set_state(opts,cb){
             .send(doc)
     }
 
-    // now go get the doc (or get nothing if it doesn't exist yet)
-    const req = superagent
-        .get(query)
-        .set('accept','application/json')
-        .set('followRedirect',true)
-        .then( res=> {
-            // console.log('back from query with res')
-            let doc = {}
-            if(res.body.error && res.body.error==='not_found'
-               && res.body.reason && res.body.reason==='missing'){
-                // need to make a new doc
-                // doc = {}
-            }else{
-                doc = res.body
-            }
-            // modify doc to contain new state value
-            return modify_doc(doc)
-            // save it
-        },err =>{
+    const get_job = ()=>{
+        return superagent
+            .get(query)
+            .set('accept','application/json')
+            .set('followRedirect',true)
+    }
+    const modify_doc = make_modifier( {'year':year
+                                       ,'state':state
+                                       ,'value':value}
+                                    )
+
+
+    // now set up the get/put/retry chain of commands
+    let old_doc={}
+    const req = get_job()
+          .then( get_handler )
+          .catch( err =>{
             // console.log(err.response.body)
             if(err.status !== undefined &&
                err.status === 404 &&
@@ -133,15 +265,44 @@ function _couchdb_set_state(opts,cb){
                err.response.body.reason === 'missing'
               ){ // not found, but just missing
                 let doc  = {}
-                // modify doc to contain new state value
-                return modify_doc(doc)
-                // save it
+                return doc
             }else{
                 // not good, so bail out
                 // console.log('in error else case, not 404 missing')
                 throw err.response.body
             }
-        })
+          })
+          .then( doc => {
+              if(Object.keys(doc).length > 0){
+                  old_doc = set_old_doc(year,state,doc)
+              }
+              return modify_doc(doc)
+          })
+          .then(put_job)
+          .catch( err => {
+              if(err.status !== undefined &&
+                 err.status === 409
+                 //&&
+                 //err.response.body !== undefined &&
+                 //err.response.body.reason === 'Document update conflict.'
+                ){
+                  console.log(err.response.body)
+                  // just a conflict, try again
+                  const conflict_handler =
+                        make_conflict_handler(old_doc,
+                                              {'year':year
+                                               ,'state':state
+                                               ,'value':value}
+                                              ,err
+                                              ,get_job
+                                              ,modify_doc
+                                              ,put_job
+                                             )
+                  return conflict_handler()
+              }else{
+                  throw err
+              }
+          })
     if(!cb || cb === undefined){
         return req //return the promise object from superagent
     }else{

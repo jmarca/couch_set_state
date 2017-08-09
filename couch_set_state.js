@@ -63,8 +63,6 @@ function couchdb_set_state(opts,cb){
     return _couchdb_set_state(opts,cb)
 }
 
-const state_test = (state,old_doc) => {
-}
 
 function get_state(year,state,doc){
     if(year===undefined){
@@ -80,6 +78,7 @@ function get_state(year,state,doc){
 
 const year_test = (year,state,old_doc,conflict_err) => {
     const old_state = get_state(year,state,old_doc)
+    // console.log(old_doc,old_state)
     if(old_state === undefined ){
         // console.log('old state is undefined')
         return (new_doc) => {
@@ -144,12 +143,7 @@ function make_conflict_handler(desired_state,getter,putter){
 }
 
 function get_handler(res){
-    // console.log('back from query with res')
-    let doc = {}
-    if(res.body !== undefined){
-        doc = res.body
-    }
-    return doc
+    return res.body
 }
 
 

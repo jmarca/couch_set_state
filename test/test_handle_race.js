@@ -22,23 +22,23 @@ const date = new Date()
 const inprocess_string = date.toISOString()+' inprocess'
 
 
-const docids = [1
-                ,2
-                //,3
-                // ,4,5,6
-                // ,7,8,9
-               ].map( d => { return 'superspecial_'+d })
-const years = [
-    1
-    ,1
-    //,3,4,5,6
-    //,7,8,9
-    //,10,11
-              ].map( y =>{return 2010 + y} )
 
 function testing (t){
     return t.test('churn out lots of sets', (tt) =>{
         //tt.plan(25)
+        const docids = [1
+                        ,2
+                        //,3
+                        // ,4,5,6
+                        // ,7,8,9
+                       ].map( d => { return 'superspecial_'+d })
+        const years = [
+            1
+            ,1
+            //,3,4,5,6
+            //,7,8,9
+            //,10,11
+        ].map( y =>{return 2010 + y} )
         const jobs = []
         years.forEach( y =>{
             docids.forEach( id =>{
@@ -73,7 +73,7 @@ function testing (t){
                         tt.ok(e.response)
                         tt.ok(e.response.body)
                         tt.is(e.response.body.reason,'Document update conflict.')
-                        tt.pass('should not have conflicts')
+                        tt.pass('should have conflicts')
                         return Object.assign({'id':newtask.doc},e.response.body)
 
                     })
@@ -112,6 +112,105 @@ function testing (t){
                 tt.pass('did crashed with a document conflict')
                 //tt.end()
             })
+    }).then( async (t) => {
+        const newtask = Object.assign(
+            { 'doc': 'superspecial_1'
+              ,'state': 'Cuba'
+              ,'value':'Carcinogenic'
+            }
+            ,config.couchdb)
+
+        // save that away
+        const job = await setter(newtask)
+        return t
+    }).then( t => {
+        return t.test('test resolvable conflicts', (tt) =>{
+            //tt.plan(25)
+            const docids = [1
+                            ,2
+                            ,3
+                            // ,4,5,6
+                            // ,7,8,9
+                           ].map( d => { return 'superspecial_'+d })
+            const states = ['Nicaragua','Cuba','Venezuela']
+            const jobs = []
+            let passed_job = {}
+            docids.forEach( id =>{
+                states.forEach ( state => {
+                    const newtask = Object.assign(
+                        { 'doc': id
+                          ,'state':state
+                          ,'value':'tropical'
+                        }
+                        ,config.couchdb)
+
+                    // save that away
+                    const job = setter(newtask)
+                          .then( results =>{
+                              // expect results is okay across all docs
+                              tt.is(results.status,201)
+                              tt.ok(results.body.ok)
+                              tt.ok(results.body.id)
+                              tt.ok(results.body.rev)
+                              if(passed_job[results.body.id] === undefined){
+                                  passed_job[results.body.id] = 1
+                              }else{
+                                  passed_job[results.body.id]++
+                              }
+                              return results.body
+                          })
+                          .catch(e =>{
+                              //console.log(e)
+                              tt.is(e.status,409)
+                              tt.ok(e.response)
+                              tt.ok(e.response.body)
+                              tt.is(e.response.body.reason,'Document update conflict.')
+                              tt.fail('should not have conflicts')
+                              return Object.assign({'id':newtask.doc},e.response.body)
+
+                          })
+                jobs.push(job)
+                return null
+            })
+            return null
+        })
+        return Promise.all(jobs)
+            .then( results =>{
+                // console.log(results)
+                // expect all pass, no conflict
+                docids.forEach( id => {
+                    tt.is(passed_job[id],states.length,'got expected number of states set')
+                    return null
+                })
+
+                let passes = 0
+                let failures = 0
+                results.map( result =>{
+                    if(result.rev !== undefined &&
+                       result.ok ){
+                        passes++
+                    }
+                    if(result.error === 'conflict' &&
+                       result.reason === 'Document update conflict.'){
+                        failures++
+                    }
+                    return null
+                })
+                tt.equal(passes,docids.length * states.length,'got expected successful state set cases')
+                tt.equal(failures,0,'got zero failed states')
+                tt.pass('no longer bailing out because that is horrible.')
+                // all done with this test
+            })
+            .catch(e=>{
+                tt.is(e.status,409)
+                tt.ok(e.response)
+                tt.ok(e.response.body)
+                tt.is(e.response.body.reason,'Document update conflict.')
+                tt.fail('Oops.  should not have crashed with a document conflict')
+                //tt.end()
+            })
+
+        })
 
     }).catch(tap.threw)
 

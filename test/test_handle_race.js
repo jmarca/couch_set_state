@@ -24,7 +24,7 @@ const inprocess_string = date.toISOString()+' inprocess'
 
 
 function testing (t){
-    return t.test('churn out lots of sets', (tt) =>{
+    return t.test('unresolvable conflicts', (tt) =>{
         //tt.plan(25)
         const docids = [1
                         ,2
@@ -198,6 +198,107 @@ function testing (t){
                 })
                 tt.equal(passes,docids.length * states.length,'got expected successful state set cases')
                 tt.equal(failures,0,'got zero failed states')
+                tt.pass('no longer bailing out because that is horrible.')
+                // all done with this test
+            })
+            .catch(e=>{
+                tt.is(e.status,409)
+                tt.ok(e.response)
+                tt.ok(e.response.body)
+                tt.is(e.response.body.reason,'Document update conflict.')
+                tt.fail('Oops.  should not have crashed with a document conflict')
+                //tt.end()
+            })
+
+        })
+
+    }).then( t => {
+        return t.test('test timeout after 10 tries to resolve conflicts', (tt) =>{
+            //tt.plan(25)
+            const docids = [1
+                            //,2
+                            //,3
+                            // ,4,5,6
+                            // ,7,8,9
+                           ].map( d => { return 'superspecial_'+d })
+            const states = ['Nicaragua','Cuba','Venezuela']
+            const years = [
+                1,2,3,4,5,6
+                //,5,6
+                //,7,8,9
+                //,10,11
+            ].map( y =>{return 2010 + y} )
+            const jobs = []
+            let passed_job = {}
+            years.forEach( y => {
+                docids.forEach( id =>{
+                    states.forEach ( state => {
+                        const newtask = Object.assign(
+                            { 'doc': id
+                              ,'state':state
+                              ,'year':y
+                              ,'value':'vacay'
+                            }
+                            ,config.couchdb)
+
+                        // save that away
+                        const job = setter(newtask)
+                              .then( results =>{
+                                  // expect results is okay across all docs
+                                  tt.is(results.status,201)
+                                  tt.ok(results.body.ok)
+                                  tt.ok(results.body.id)
+                                  tt.ok(results.body.rev)
+                                  if(passed_job[results.body.id] === undefined){
+                                      passed_job[results.body.id] = 1
+                                  }else{
+                                      passed_job[results.body.id]++
+                                  }
+                                  return results.body
+                              })
+                              .catch(e =>{
+                                  console.log('got error, ',e.response.body)
+                                  tt.is(e.status,409)
+                                  tt.ok(e.response)
+                                  tt.ok(e.response.body)
+                                  tt.is(e.response.body.reason,'Document update conflict.')
+                                  tt.pass('expect to bail out at some point')
+                                  return Object.assign({'id':newtask.doc},e.response.body)
+
+                              })
+                        jobs.push(job)
+                        return null
+                    })
+                    return null
+                })
+                return null
+        })
+        return Promise.all(jobs)
+            .then( results =>{
+                console.log(results.length)
+                tt.is(results.length,years.length*states.length*docids.length
+                      ,'got expected size of output from promise.all')
+                // expect all pass, no conflict
+                docids.forEach( id => {
+                    tt.is(passed_job[id],10,'got expected number of states set')
+                    return null
+                })
+
+                let passes = 0
+                let failures = 0
+                results.map( result =>{
+                    if(result.rev !== undefined &&
+                       result.ok ){
+                        passes++
+                    }
+                    if(result.error === 'conflict' &&
+                       result.reason === 'Document update conflict.'){
+                        failures++
+                    }
+                    return null
+                })
+                tt.equal(passes,docids.length * 10,'got expected successful state set cases')
+                tt.equal(failures,docids.length * states.length * years.length - (docids.length * 10) ,'got expected number of failed state set cases')
                 tt.pass('no longer bailing out because that is horrible.')
                 // all done with this test
             })

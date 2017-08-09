@@ -117,7 +117,7 @@ function make_conflict_handler(desired_state,getter,putter){
             .then( doc =>{
                 if(! update_safe ){
                     old_doc = set_old_doc(year,state,doc)
-                    update_safe = year_test(desired_state.year,desired_state.state,old_doc,conflict_err)
+                    update_safe = year_test(year,state,old_doc,conflict_err)
                 }else{
                     if(!update_safe(doc)){
                         //console.log('not safe to update')
@@ -126,14 +126,20 @@ function make_conflict_handler(desired_state,getter,putter){
                 }
                 // if still here, didn't throw
                 // if didn't throw, either first pass, or update safe
-                // console.log('safe to update')
+                console.log('safe to update',doc._id,doc._rev,' to ',desired_state)
                 return putter(doc)
+                    .then( blah =>{
+                        console.log('after put, looplimit is ',looplimit,desired_state)
+                        return blah
+                    })
                     .catch( err=> {
                         if(looplimit-- > 0 &&
                            err.status !== undefined &&
                            err.status === 409) {
+                            console.log('looplimit is ',looplimit,desired_state)
                             return conflict_handler(err)
                         }else{
+                            console.log('bailing out for ',desired_state)
                             throw err
                         }
                     })

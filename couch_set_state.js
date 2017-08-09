@@ -81,29 +81,20 @@ function get_state(year,state,doc){
 const year_test = (year,state,old_doc,conflict_err) => {
     const old_state = get_state(year,state,old_doc)
     if(old_state === undefined ){
-        console.log('old state is undefined')
+        // console.log('old state is undefined')
         return (new_doc) => {
             // this version is empty old doc, so if the new doc has
             // the same state set as the target, then fail (we started
             // empty, something else set our state)
             let new_state = get_state(year,state,new_doc)
-            console.log('new_state is ',new_state)
-            if( new_state === undefined ){
-                console.log('new doc has no state', state)
-                return new_doc
-            }else{
-                throw conflict_err
-            }
+            // console.log('new_state is ',new_state)
+            return new_state === undefined
         }
     }else{
-        console.log('old state is defined as ',old_state)
+        // console.log('old state is defined as ',old_state)
         return (new_doc)=>{
             let new_state = get_state(year,state,new_doc)
-            if( new_state == old_state ){
-                return new_doc
-            }else{
-                throw conflict_err
-            }
+            return new_state == old_state
         }
     }
 
@@ -111,42 +102,42 @@ const year_test = (year,state,old_doc,conflict_err) => {
 
 
 
-
-function make_conflict_handler(old_doc,desired_state,conflict_err,getter,modifier,putter){
+function make_conflict_handler(desired_state,getter,putter){
     let looplimit = 10
     let update_safe
     const year = desired_state.year
     const state = desired_state.state
     const value = desired_state.value
-
-    update_safe = year_test(desired_state.year,desired_state.state,old_doc,conflict_err)
+    let old_doc = {}
+    let conflict_err
     const conflict_handler = err => {
-        if(looplimit-- < 1) {
-            console.log ('maximum retries hit for conflicts, document id ',old_doc._id)
-            throw err
-        }
+        conflict_err = err
         // compare old doc with the new doc in results
         // focusing on the key we're trying to update in desired_state
-
-
         return getter()
-            .then(get_handler)
             .then( doc =>{
-                doc = update_safe(doc)
-                return modifier(doc)
-                    .then(putter)
+                if(! update_safe ){
+                    old_doc = set_old_doc(year,state,doc)
+                    update_safe = year_test(desired_state.year,desired_state.state,old_doc,conflict_err)
+                }else{
+                    if(!update_safe(doc)){
+                        //console.log('not safe to update')
+                        throw conflict_err
+                    }
+                }
+                // if still here, didn't throw
+                // if didn't throw, either first pass, or update safe
+                // console.log('safe to update')
+                return putter(doc)
                     .catch( err=> {
-                        if(err.status !== undefined &&
+                        if(looplimit-- > 0 &&
+                           err.status !== undefined &&
                            err.status === 409) {
                             return conflict_handler(err)
                         }else{
                             throw err
                         }
                     })
-            })
-            .catch( err=> {
-                console.log('after update_safe, caught error')
-                throw err
             })
     }
     return conflict_handler
@@ -158,7 +149,6 @@ function get_handler(res){
     if(res.body !== undefined){
         doc = res.body
     }
-    console.log('get handler sez',doc)
     return doc
 }
 
@@ -232,13 +222,19 @@ function _couchdb_set_state(opts,cb){
     }
     const query = cdb+'/'+db+'/'+id
     // console.log(query)
+    const modify_doc = make_modifier( {'year':year
+                                       ,'state':state
+                                       ,'value':value}
+                                    )
+
 
     const put_job = (doc) => {
+
         return superagent
             .put(query)
             .type('json')
             .set('accept','application/json')
-            .send(doc)
+            .send(modify_doc(doc))
     }
 
     const get_job = ()=>{
@@ -246,71 +242,43 @@ function _couchdb_set_state(opts,cb){
             .get(query)
             .set('accept','application/json')
             .set('followRedirect',true)
+            .then(get_handler)
+            .catch( err =>{
+                // console.log(err.response.body)
+                if(err.status !== undefined &&
+                   err.status === 404 &&
+                   err.response.body !== undefined &&
+                   err.response.body.reason === 'missing'
+                  ){ // not found, but just missing.  fine
+                    let doc  = {}
+                    return doc
+                }else{
+                    throw err
+                }
+            })
     }
-    const modify_doc = make_modifier( {'year':year
-                                       ,'state':state
-                                       ,'value':value}
-                                    )
 
+    // now set up the recursive get/put/retry chain of commands
+    const conflict_handler =
+          make_conflict_handler(
+              {'year':year
+               ,'state':state
+               ,'value':value}
+              ,get_job
+              ,put_job
+          )
 
-    // now set up the get/put/retry chain of commands
-    let old_doc={}
-    const req = get_job()
-          .then( get_handler )
-          .catch( err =>{
-            // console.log(err.response.body)
-            if(err.status !== undefined &&
-               err.status === 404 &&
-               err.response.body !== undefined &&
-               err.response.body.reason === 'missing'
-              ){ // not found, but just missing
-                let doc  = {}
-                return doc
-            }else{
-                // not good, so bail out
-                // console.log('in error else case, not 404 missing')
-                throw err.response.body
-            }
-          })
-          .then( doc => {
-              if(Object.keys(doc).length > 0){
-                  old_doc = set_old_doc(year,state,doc)
-              }
-              return modify_doc(doc)
-          })
-          .then(put_job)
-          .catch( err => {
-              if(err.status !== undefined &&
-                 err.status === 409
-                 //&&
-                 //err.response.body !== undefined &&
-                 //err.response.body.reason === 'Document update conflict.'
-                ){
-                  console.log(err.response.body)
-                  // just a conflict, try again
-                  const conflict_handler =
-                        make_conflict_handler(old_doc,
-                                              {'year':year
-                                               ,'state':state
-                                               ,'value':value}
-                                              ,err
-                                              ,get_job
-                                              ,modify_doc
-                                              ,put_job
-                                             )
-                  return conflict_handler()
-              }else{
-                  throw err
-              }
-          })
+    const req = conflict_handler()
     if(!cb || cb === undefined){
-        return req //return the promise object from superagent
+        return req //return the promise object
     }else{
+        // wait for the promise object to finish
         req
             .then( res =>{
                 if(res.error){
                     // console.log(res.text)
-                    throw new Error('error saving state')
+                    // throw new Error('error saving state')
+                    return cb(res.error)
                 }
                 return cb(null,res)
             })

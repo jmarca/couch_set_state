@@ -37,73 +37,84 @@ const years = [
               ].map( y =>{return 2010 + y} )
 
 function testing (t){
-    t.plan(1)
-    return t.test(
-        'churn out lots of sets', (tt) =>{
-            const jobs = []
-            years.forEach( y =>{
-                docids.forEach( id =>{
-                    const newtask = Object.assign(
-                        { 'doc': id
-                          ,'year':y
-                          ,'state':'mega'
-                          ,'value':'unproductive'
-                        }
-                        ,config.couchdb)
+    return t.test('churn out lots of sets', (tt) =>{
+        //tt.plan(25)
+        const jobs = []
+        years.forEach( y =>{
+            docids.forEach( id =>{
+                const newtask = Object.assign(
+                    { 'doc': id
+                      ,'year':y
+                      ,'state':'mega'
+                      ,'value':'unproductive'
+                    }
+                    ,config.couchdb)
 
-                    // save that away
-                    let passed_job = {}
-                    const yearly_job = setter(newtask)
-                          .then( results =>{
-                              // expect results is okay across all docs
-                              tt.is(results.status,201)
-                              tt.ok(results)
-                              tt.ok(results.body)
-                              tt.ok(results.body.ok)
-                              tt.ok(results.body.id)
-                              tt.ok(results.body.rev)
-                              if(passed_job[results.body.id] === undefined){
-                                  passed_job[results.body.id] = 1
-                              }else{
-                                  passed_job[results.body.id]++
-                              }
-                              tt.is(passed_job[results.body.id],1) // only one job passes
-                              if(!results.body.ok){
-                                  console.log('results not okay',results.body)
-                              }
-                              return null
-                          })
-                          .catch(e =>{
-                              tt.is(e.status,409)
-                              tt.ok(e.response)
-                              tt.ok(e.response.body)
-                              tt.is(e.response.body.reason,'Document update conflict.')
-                              tt.fail('should not have conflicts')
-                              throw e
-                              return null
-                          })
-                    jobs.push(yearly_job)
-                    return null
-                })
-                return null
-            })
-            return  Promise.all(jobs)
+                // save that away
+                let passed_job = {}
+                const yearly_job = setter(newtask)
                     .then( results =>{
-                        tt.fail('should have crashed with a conflict.')
-                        // all done with this test
+                        // expect results is okay across all docs
+                        tt.is(results.status,201)
+                        tt.ok(results.body.ok)
+                        tt.ok(results.body.id)
+                        tt.ok(results.body.rev)
+                        if(passed_job[results.body.id] === undefined){
+                            passed_job[results.body.id] = 1
+                        }else{
+                            passed_job[results.body.id]++
+                        }
+                        tt.is(passed_job[results.body.id],1) // only one job passes
+                        return results.body
                     })
-                    .catch(e=>{
+                    .catch(e =>{
+                        //console.log(e)
                         tt.is(e.status,409)
                         tt.ok(e.response)
                         tt.ok(e.response.body)
                         tt.is(e.response.body.reason,'Document update conflict.')
-                        tt.fail('did crashed with a document conflict')
-                        tt.end()
-                        //console.log('going to throw now')
-                        // throw(e)
-                    })
+                        tt.pass('should not have conflicts')
+                        return Object.assign({'id':newtask.doc},e.response.body)
 
+                    })
+                jobs.push(yearly_job)
+                return null
+            })
+            return null
         })
+        return Promise.all(jobs)
+            .then( results =>{
+                // console.log(results)
+                // expect two pass, two conflict
+                let passes = 0
+                let failures = 0
+                results.map( result =>{
+                    if(result.rev !== undefined &&
+                       result.ok ){
+                        passes++
+                    }
+                    if(result.error === 'conflict' &&
+                       result.reason === 'Document update conflict.'){
+                        failures++
+                    }
+                    return null
+                })
+                tt.equal(passes,2,'got two successful state set cases')
+                tt.equal(failures,2,'got two failed state set cases')
+                tt.pass('no longer bailing out because that is horrible.')
+                // all done with this test
+            })
+            .catch(e=>{
+                tt.is(e.status,409)
+                tt.ok(e.response)
+                tt.ok(e.response.body)
+                tt.is(e.response.body.reason,'Document update conflict.')
+                tt.pass('did crashed with a document conflict')
+                //tt.end()
+            })
+
+    }).catch(tap.threw)
+
 }
 
 config_okay(config_file)

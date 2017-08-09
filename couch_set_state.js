@@ -126,20 +126,20 @@ function make_conflict_handler(desired_state,getter,putter){
                 }
                 // if still here, didn't throw
                 // if didn't throw, either first pass, or update safe
-                console.log('safe to update',doc._id,doc._rev,' to ',desired_state)
+                // console.log('safe to update',doc._id,doc._rev,' to ',desired_state)
                 return putter(doc)
                     .then( blah =>{
-                        console.log('after put, looplimit is ',looplimit,desired_state)
+                        // console.log('after put, looplimit is ',looplimit,desired_state)
                         return blah
                     })
                     .catch( err=> {
                         if(looplimit-- > 0 &&
                            err.status !== undefined &&
                            err.status === 409) {
-                            console.log('looplimit is ',looplimit,desired_state)
+                            // console.log('looplimit is ',looplimit,desired_state)
                             return conflict_handler(err)
                         }else{
-                            console.log('bailing out for ',desired_state)
+                            // console.log('bailing out for ',desired_state)
                             throw err
                         }
                     })

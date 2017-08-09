@@ -121,11 +121,15 @@ function testing (t){
             ,config.couchdb)
 
         // save that away
-        const job = await setter(newtask)
+        let job = await setter(newtask)
+        newtask.doc = 'superspecial_2'
+        job = await setter(newtask)
+        newtask.doc = 'superspecial_3'
+        job = await setter(newtask)
+
         return t
     }).then( t => {
         return t.test('test resolvable conflicts', (tt) =>{
-            //tt.plan(25)
             const docids = [1
                             ,2
                             ,3
@@ -214,7 +218,6 @@ function testing (t){
 
     }).then( t => {
         return t.test('test timeout after 10 tries to resolve conflicts', (tt) =>{
-            //tt.plan(25)
             const docids = [1
                             //,2
                             //,3
@@ -224,8 +227,7 @@ function testing (t){
             const states = ['Nicaragua','Cuba','Venezuela']
             const years = [
                 1,2,3,4,5,6
-                //,5,6
-                //,7,8,9
+                ,7,8,9
                 //,10,11
             ].map( y =>{return 2010 + y} )
             const jobs = []
@@ -245,23 +247,9 @@ function testing (t){
                         const job = setter(newtask)
                               .then( results =>{
                                   // expect results is okay across all docs
-                                  tt.is(results.status,201)
-                                  tt.ok(results.body.ok)
-                                  tt.ok(results.body.id)
-                                  tt.ok(results.body.rev)
-                                  if(passed_job[results.body.id] === undefined){
-                                      passed_job[results.body.id] = 1
-                                  }else{
-                                      passed_job[results.body.id]++
-                                  }
                                   return results.body
                               })
                               .catch(e =>{
-                                  console.log('got error, ',e.response.body)
-                                  tt.is(e.status,409)
-                                  tt.ok(e.response)
-                                  tt.ok(e.response.body)
-                                  tt.is(e.response.body.reason,'Document update conflict.')
                                   tt.pass('expect to bail out at some point')
                                   return Object.assign({'id':newtask.doc},e.response.body)
 
@@ -275,31 +263,28 @@ function testing (t){
         })
         return Promise.all(jobs)
             .then( results =>{
-                console.log(results.length)
                 tt.is(results.length,years.length*states.length*docids.length
                       ,'got expected size of output from promise.all')
-                // expect all pass, no conflict
-                docids.forEach( id => {
-                    tt.is(passed_job[id],10,'got expected number of states set')
-                    return null
-                })
-
+                let others = []
                 let passes = 0
                 let failures = 0
                 results.map( result =>{
                     if(result.rev !== undefined &&
                        result.ok ){
                         passes++
+                        return null
                     }
                     if(result.error === 'conflict' &&
                        result.reason === 'Document update conflict.'){
                         failures++
+                        return null
                     }
+                    others.push(result)
                     return null
                 })
-                tt.equal(passes,docids.length * 10,'got expected successful state set cases')
-                tt.equal(failures,docids.length * states.length * years.length - (docids.length * 10) ,'got expected number of failed state set cases')
-                tt.pass('no longer bailing out because that is horrible.')
+                tt.equal(passes + failures ,results.length,'got passes and conflicts only')
+                tt.match(others,[],'no strange outcomes')
+
                 // all done with this test
             })
             .catch(e=>{

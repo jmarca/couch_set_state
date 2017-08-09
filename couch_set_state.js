@@ -192,8 +192,10 @@ function set_old_doc(year,state,doc){
 }
 
 
-function make_putter (query,modify_doc){
+function make_putter (query,desired_state){
     const _query = query
+    const modify_doc = make_modifier( desired_state)
+
     return (doc) => {
 
         return superagent
@@ -240,10 +242,9 @@ function _couchdb_set_state(opts,cb){
     const c = Object.assign({},config.couchdb,opts)
     const db = c.db
     const id = c.doc
-    const year = c.year
-    const state = c.state
-    const value = c.value
-
+    const desired_state = {'year':c.year
+                           ,'state':c.state
+                           ,'value':c.value}
     let cdb = c.host || '127.0.0.1'
     const cport = c.port || 5984
     cdb = cdb+':'+cport
@@ -258,19 +259,13 @@ function _couchdb_set_state(opts,cb){
     }
     const query = cdb+'/'+db+'/'+id
     // console.log(query)
-    const modify_doc = make_modifier( {'year':year
-                                       ,'state':state
-                                       ,'value':value}
-                                    )
 
-    const put_job = make_putter(query,modify_doc)
+    const put_job = make_putter(query,desired_state)
     const get_job = make_getter(query)
     // now set up the recursive get/put/retry chain of commands
     const conflict_handler =
           make_conflict_handler(
-              {'year':year
-               ,'state':state
-               ,'value':value}
+              desired_state
               ,get_job
               ,put_job
           )

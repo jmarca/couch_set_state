@@ -93,7 +93,7 @@ const year_test = (year,state,old_doc,conflict_err) => {
         // console.log('old state is defined as ',old_state)
         return (new_doc)=>{
             let new_state = get_state(year,state,new_doc)
-            return new_state == old_state
+            return new_state === old_state
         }
     }
 
@@ -191,6 +191,48 @@ function set_old_doc(year,state,doc){
     return old_doc
 }
 
+
+function make_putter (query,modify_doc){
+    const _query = query
+    return (doc) => {
+
+        return superagent
+            .put(_query)
+            .type('json')
+            .set('accept','application/json')
+            .send(modify_doc(doc))
+    }
+}
+
+function make_getter (query){
+    const _query = query
+    return  ()=>{
+        return superagent
+            .get(_query)
+            .set('accept','application/json')
+            .set('followRedirect',true)
+            .then(get_handler)
+            .catch( err =>{
+                // console.log(err.response.body)
+                if(err.status !== undefined &&
+                   err.status === 404 &&
+                   err.response.body !== undefined &&
+                   err.response.body.reason === 'missing'
+                  ){ // not found, but just missing.  fine
+                    let doc  = {}
+                    return doc
+                }else{
+                    throw err
+                }
+            })
+    }
+}
+
+
+
+// need to simplify this code.
+
+/*eslint complexity: ["error", 5]*/
 function _couchdb_set_state(opts,cb){
     if(opts.couchdb !== undefined){
         throw new Error('hey, you are using an old way of doing this')
@@ -221,37 +263,8 @@ function _couchdb_set_state(opts,cb){
                                        ,'value':value}
                                     )
 
-
-    const put_job = (doc) => {
-
-        return superagent
-            .put(query)
-            .type('json')
-            .set('accept','application/json')
-            .send(modify_doc(doc))
-    }
-
-    const get_job = ()=>{
-        return superagent
-            .get(query)
-            .set('accept','application/json')
-            .set('followRedirect',true)
-            .then(get_handler)
-            .catch( err =>{
-                // console.log(err.response.body)
-                if(err.status !== undefined &&
-                   err.status === 404 &&
-                   err.response.body !== undefined &&
-                   err.response.body.reason === 'missing'
-                  ){ // not found, but just missing.  fine
-                    let doc  = {}
-                    return doc
-                }else{
-                    throw err
-                }
-            })
-    }
-
+    const put_job = make_putter(query,modify_doc)
+    const get_job = make_getter(query)
     // now set up the recursive get/put/retry chain of commands
     const conflict_handler =
           make_conflict_handler(

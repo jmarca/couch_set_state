@@ -236,19 +236,10 @@ function make_getter (query){
 
 
 
-// need to simplify this code.
 
-/*eslint complexity: ["error", 9]*/
-function _couchdb_set_state(opts,cb){
-    if(opts.couchdb !== undefined){
-        throw new Error('hey, you are using an old way of doing this')
-    }
-    const c = Object.assign({},config.couchdb,opts)
+function get_query(c){
     const db = c.db
     const id = c.doc
-    const desired_state = {'year':c.year
-                           ,'state':c.state
-                           ,'value':c.value}
     let cdb = c.host || '127.0.0.1'
     const cport = c.port || 5984
     cdb = cdb+':'+cport
@@ -256,14 +247,32 @@ function _couchdb_set_state(opts,cb){
         cdb = 'http://'+cdb
     }
     if(db === undefined ){
-        return cb('db is required in options object under \'db\' key')
+        throw('db is required in options object under \'db\' key')
     }
     if(id === undefined ){
-        return cb('document id is required in options object under \'doc\' key')
+        throw('document id is required in options object under \'doc\' key')
     }
-    const query = cdb+'/'+db+'/'+id
-    // console.log(query)
+    return cdb+'/'+db+'/'+id
+}
 
+
+
+/*eslint complexity: ["error", 5]*/
+function _couchdb_set_state(opts,cb){
+    const c = Object.assign({},config.couchdb,opts)
+    const desired_state = {'year':c.year
+                           ,'state':c.state
+                           ,'value':c.value}
+    let query
+    try{
+        if(opts.couchdb !== undefined){
+            throw ('hey, you are using an old way of doing this')
+        }
+        query = get_query(c)
+    }catch(e){
+        if(cb) return cb(e)
+        throw new Error(e)
+    }
     const put_job = make_putter(query,desired_state)
     const get_job = make_getter(query)
     // now set up the recursive get/put/retry chain of commands

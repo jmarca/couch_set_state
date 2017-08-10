@@ -1,8 +1,6 @@
 const superagent = require('superagent')
 const config={'couchdb':{}}
 const config_okay = require('config_okay')
-const CONFLICT_ERROR='unresolvable conflict'
-const CONFLICT_STATUS=409
 /**
  * couchdb_set_state(opts,cb)
  * opts = {'db': the couchdb holding the document,

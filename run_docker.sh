@@ -99,10 +99,13 @@ couchdb_nw(){
 
 # }
 
+make_couch_node_tests_docker(){
+    docker build  -t jmarca/couch_node_tests .
+}
 
 
-couch_set_state_test(){
-    del_stopped "couch_set_state"
+couch_node_test(){
+    del_stopped "couch_node_tests"
     relies_on_network couchdb_nw
-    docker run --rm -it -v ${PWD}:/usr/src/dev  -w /usr/src/dev --network=couchdb_nw --name couch_set_state jmarca/couch_set_state bash
+    docker run --rm -it -u node -v ${PWD}:/usr/src/dev  -w /usr/src/dev --network=couchdb_nw --name couch_node_tests jmarca/couch_node_tests bash
 }

@@ -12,7 +12,7 @@
   },
   "devDependencies": {
     "couch_check_state": "git://github.com/jmarca/couch_check_state.git",
-    "tap": "^12.0.0"
+    "tap": "^12.6.1"
   },
   "scripts": {
     "test": "tap test/**/test*.js --cov",

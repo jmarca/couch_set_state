@@ -69,7 +69,7 @@ function testing (t){
                            tt.ok(err,'should fail without params')
                            tt.notOk(state)
                            tt.match(err
-                                    ,new Error('not_found')
+                                    ,new Error('Not Found')
                                    ,'failed without db')
                            tt.end()
                        })

@@ -19,7 +19,7 @@ const inprocess_string = (new Date()).toISOString()+' inprocess'
 const utils = require('./utils.js')
 
 
-function testing (t){p
+function testing (t){
     t.plan(3)
 
     return t.test('should not work right without config params',tt => {

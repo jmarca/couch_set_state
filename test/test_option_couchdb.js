@@ -19,7 +19,7 @@ const inprocess_string = (new Date()).toISOString()+' inprocess'
 const utils = require('./utils.js')
 
 
-function testing (t){
+function testing (t){p
     t.plan(3)
 
     return t.test('should not work right without config params',tt => {
@@ -69,7 +69,7 @@ function testing (t){
                            tt.ok(err,'should fail without params')
                            tt.notOk(state)
                            tt.match(err
-                                    ,new Error('not_found')
+                                    ,new Error('Not Found')
                                    ,'failed without db')
                            tt.end()
                        })

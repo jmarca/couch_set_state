@@ -67,37 +67,18 @@ couchdb_nw(){
     docker network create --driver bridge couchdb_nw
 }
 
-# couchdb(){
-#     relies_on_network couchdb_nw
+couchdb(){
+    del_stopped "couchdb"
+    relies_on_network couchdb_nw
+    # fire up couchdb
+    docker run -d \
+           -e COUCHDB_USER=james \
+           -e COUCHDB_PASSWORD=grobblefruit \
+           --network=couchdb_nw \
+           --name couchdb \
+           couchdb:latest
 
-#     docker run -d --rm \
-#            -v /etc/localtime:/etc/localtime:ro \
-#            --network=postgres_nw \
-#            --name postgres \
-#            postgres:alpine
-
-# }
-
-# couch_set_state_test_setup(){
-#     # relies_on couchdb
-#     # sleep 1
-#     # docker exec postgres psql -h postgres -U postgres -c "CREATE USER testu WITH LOGIN CREATEDB PASSWORD 'my secret password';"
-#     # docker exec postgres psql -c 'create database atestdb;' -U testu -d postgres
-#     # docker exec postgres mkdir /var/log/logdb2
-#     # docker exec postgres mkdir /second
-#     # docker exec postgres chown -R postgres /second
-#     # docker exec postgres chown -R postgres /var/log/logdb2
-#     # docker exec postgres su-exec postgres initdb -D /second
-#     # sleep 1
-#     # docker exec postgres sh -c "echo 'host all all all trust' >> /second/pg_hba.conf"
-#     # docker exec postgres su-exec postgres pg_ctl -w -D /second -o "-p 5434" -l /var/log/logdb2/log start
-#     # docker exec postgres psql -p 5434 -U postgres -c "CREATE USER testu WITH LOGIN CREATEDB PASSWORD 'my secret password';"
-#     # docker exec postgres psql -p 5434 -c 'create database atestdb;' -U testu -d postgres
-
-#     # echo "{\"postgresql\":{\"host\":\"postgres\",\"port\":5432,\"username\":\"testu\",\"db\":\"atestdb\"}}" > test.config.json && chmod 0600 test.config.json
-
-
-# }
+}
 
 make_couch_node_tests_docker(){
     docker build  -t jmarca/couch_node_tests .
@@ -107,5 +88,18 @@ make_couch_node_tests_docker(){
 couch_node_test(){
     del_stopped "couch_node_tests"
     relies_on_network couchdb_nw
-    docker run --rm -it -u node -v ${PWD}:/usr/src/dev  -w /usr/src/dev --network=couchdb_nw --name couch_node_tests jmarca/couch_node_tests bash
+    relies_on couchdb
+    COUCHDB_USER=james
+    COUCHDB_PASSWORD=grobblefruit
+    echo "{\"couchdb\":{\"host\":\"couchdb\",\"port\":5984,\"db\":\"newdb\",\"auth\":{\"username\":\"${COUCHDB_USER}\",\"password\":\"${COUCHDB_PASSWORD}\"}}}" > test.config.json && chmod 0600 test.config.json
+    docker run --rm -it \
+           -u node \
+           -v ${PWD}:/usr/src/dev \
+           -w /usr/src/dev \
+           --network=couchdb_nw \
+           -e COUCHDB_USER=james \
+           -e COUCHDB_PASSWORD=grobblefruit \
+           -e COUCHDB_PASS=grobblefruit \
+           -e COUCHDB_HOST=couchdb \
+           --name run_tests_sh jmarca/couch_node_tests:126 bash
 }

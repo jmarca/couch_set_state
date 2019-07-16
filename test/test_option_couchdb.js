@@ -27,6 +27,7 @@ function testing (t){
                 ,'year':2008
                 ,'state':'truckimputed'
                 ,'value':inprocess_string
+                ,'host':config.couchdb.host
                }
                ,function(err,state){
                    tt.ok(err,'should fail without params')
@@ -44,6 +45,7 @@ function testing (t){
                         ,'year':2008
                         ,'state':'truckimputed'
                         ,'value':inprocess_string
+                        ,'host':config.couchdb.host
                        }
                        ,function(err,state){
                            tt.ok(err,'should fail without params')
@@ -63,12 +65,13 @@ function testing (t){
                         ,'year':2008
                         ,'state':'truckimputed'
                         ,'value':inprocess_string
+                        ,'host':config.couchdb.host
                        }
                        ,function(err,state){
                            tt.ok(err,'should fail without params')
                            tt.notOk(state)
                            tt.match(err
-                                    ,new Error('ECONNREFUSED')
+                                    ,new Error('Not Found')
                                    ,'failed without db')
                            tt.end()
                        })

@@ -62,6 +62,14 @@ function couchdb_set_state(opts,cb){
 }
 
 
+const  auth_check = (r,opts)=>{
+    if(opts.auth && opts.auth.username && opts.auth.password){
+        r.auth(opts.auth.username,opts.auth.password)
+    }
+    return r
+}
+
+
 function get_state(year,state,doc){
     if(year===undefined){
         return doc[state]
@@ -196,27 +204,31 @@ function set_old_doc(year,state,doc){
 }
 
 
-function make_putter (query,desired_state){
+function make_putter (opts, query, desired_state){
     const _query = query
     const modify_doc = make_modifier( desired_state)
 
     return (doc) => {
+        const req = superagent
+              .put(_query)
+              .type('json')
+              .set('accept','application/json')
 
-        return superagent
-            .put(_query)
-            .type('json')
-            .set('accept','application/json')
+        auth_check(req,opts)
+        return req
             .send(modify_doc(doc))
     }
 }
 
-function make_getter (query){
+function make_getter (opts,query){
     const _query = query
     return  ()=>{
-        return superagent
+        const req = superagent
             .get(_query)
             .set('accept','application/json')
-            .set('followRedirect',true)
+              .set('followRedirect',true)
+        auth_check(req,opts)
+        return req
             .then(get_handler)
             .catch( err =>{
                 // console.log(err.response.body)
@@ -274,8 +286,8 @@ function _couchdb_set_state(opts,cb){
     const desired_state = {'year':c.year
                            ,'state':c.state
                            ,'value':c.value}
-    const put_job = make_putter(query,desired_state)
-    const get_job = make_getter(query)
+    const put_job = make_putter(opts,query,desired_state)
+    const get_job = make_getter(opts,query)
     // now set up the recursive get/put/retry chain of commands
     const conflict_handler =
           make_conflict_handler(

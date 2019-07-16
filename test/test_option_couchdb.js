@@ -21,7 +21,6 @@ const utils = require('./utils.js')
 
 function testing (t){
     t.plan(3)
-
     return t.test('should not work right without config params',tt => {
         tt.plan(3)
         setter({'doc':'801245'
@@ -69,7 +68,7 @@ function testing (t){
                            tt.ok(err,'should fail without params')
                            tt.notOk(state)
                            tt.match(err
-                                    ,new Error('Not Found')
+                                    ,new Error('ECONNREFUSED')
                                    ,'failed without db')
                            tt.end()
                        })

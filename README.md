@@ -1,6 +1,6 @@
 # Couch Set State
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/jmarca/couch_set_state.svg)](https://greenkeeper.io/)
+
 [![Build Status](https://travis-ci.org/jmarca/couch_set_state.svg?branch=master)](https://travis-ci.org/jmarca/couch_set_state)
 [![Code Climate](https://codeclimate.com/github/jmarca/couch_set_state/badges/gpa.svg)](https://codeclimate.com/github/jmarca/couch_set_state)
 [![Test Coverage](https://codeclimate.com/github/jmarca/couch_set_state/badges/coverage.svg)](https://codeclimate.com/github/jmarca/couch_set_state/coverage)
